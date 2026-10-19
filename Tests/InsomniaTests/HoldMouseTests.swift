@@ -90,7 +90,7 @@ final class HoldMouseTests: XCTestCase {
         window.contentView = nil
     }
 
-    func testRouterConsumesReplicaWindowSequenceAndUsesCurrentGeometry() throws {
+    func testRouterUsesRealPointerWhenReplicaEventsReportTheWindowCentre() throws {
         let host = NSHostingView(rootView: HoldMouseSurface(onPress: {}, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
         let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 100, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host
@@ -107,9 +107,13 @@ final class HoldMouseTests: XCTestCase {
         surface.onPress = { presses += 1 }
         surface.onCancel = { cancels += 1 }
         surface.onRelease = { releases += 1 }
-        let router = StatusHoldMouseRouter(host: host, installMonitor: false)
+        var pointer = NSPoint.zero
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { pointer })
         func mouse(_ type: NSEvent.EventType, point: NSPoint) -> NSEvent {
-            NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: 0, windowNumber: replica.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+            pointer = replica.convertPoint(toScreen: point)
+            // Mirror the real status bar: every mouse event reports the
+            // replica centre, even when the pointer is over the cross.
+            return NSEvent.mouseEvent(with: type, location: NSPoint(x: replica.frame.width / 2, y: replica.frame.height / 2), modifierFlags: [], timestamp: 0, windowNumber: replica.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
         }
         for width: CGFloat in [100, 160, 80] {
             window.setContentSize(NSSize(width: width, height: 24))

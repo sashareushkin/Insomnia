@@ -133,20 +133,26 @@ final class HoldMouseView: NSView {
             rightMouseDown(with: event)
             return
         }
+        beginPress(at: Self.screenPoint(event))
+    }
+    override func mouseDragged(with event: NSEvent) {
+        dragPress(to: Self.screenPoint(event))
+    }
+    func beginPress(at point: NSPoint) {
         guard origin == nil else { return }
-        origin = Self.screenPoint(event)
+        origin = point
         cancelled = false
         onPress?()
     }
-    override func mouseDragged(with event: NSEvent) {
+    func dragPress(to point: NSPoint) {
         guard let origin, !cancelled else { return }
-        let point = Self.screenPoint(event)
         if hypot(point.x - origin.x, point.y - origin.y) > 12 {
             cancelled = true
             onCancel?()
         }
     }
-    override func mouseUp(with event: NSEvent) {
+    override func mouseUp(with event: NSEvent) { releasePress() }
+    func releasePress() {
         guard origin != nil else { return }
         origin = nil
         onRelease?()
@@ -173,9 +179,11 @@ final class StatusHoldMouseRouter {
     private weak var host: NSView?
     private var captured: HoldMouseView?
     private var monitor: Any?
+    private let pointerLocation: @MainActor () -> NSPoint
 
-    init(host: NSView, installMonitor: Bool = true) {
+    init(host: NSView, installMonitor: Bool = true, pointerLocation: @escaping @MainActor () -> NSPoint = { NSEvent.mouseLocation }) {
         self.host = host
+        self.pointerLocation = pointerLocation
         if installMonitor {
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown]) { [weak self] event in
                 let consumed = MainActor.assumeIsolated { self?.route(event) == true }
@@ -195,9 +203,9 @@ final class StatusHoldMouseRouter {
             switch event.type {
             case .leftMouseDragged:
                 if captured.window == nil { captured.cancelPress() }
-                else { captured.mouseDragged(with: event) }
+                else { captured.dragPress(to: pointerLocation()) }
             case .leftMouseUp:
-                captured.mouseUp(with: event)
+                captured.releasePress()
                 self.captured = nil
             case .rightMouseDown:
                 captured.rightMouseDown(with: event)
@@ -208,7 +216,10 @@ final class StatusHoldMouseRouter {
         guard event.type == .leftMouseDown || event.type == .rightMouseDown,
               let host, let window = host.window, let source = event.window,
               source.level == window.level else { return false }
-        let point = source.convertPoint(toScreen: event.locationInWindow)
+        // Status-bar replicants synthesize event.locationInWindow at the
+        // window centre, regardless of the clicked region. Read the actual
+        // pointer in screen coordinates before NSWindow tracks that event.
+        let point = pointerLocation()
         func surface(in view: NSView) -> HoldMouseView? {
             guard !view.isHidden, view.alphaValue > 0 else { return nil }
             if let control = view as? HoldMouseView {
@@ -217,12 +228,14 @@ final class StatusHoldMouseRouter {
             }
             return view.subviews.lazy.compactMap { surface(in: $0) }.first
         }
-        guard let control = surface(in: host) else { return false }
+        let found = surface(in: host)
+        guard let control = found else { return false }
         if event.type == .rightMouseDown {
             control.rightMouseDown(with: event)
         } else {
             captured = control
-            control.mouseDown(with: event)
+            if event.modifierFlags.contains(.control) { control.rightMouseDown(with: event) }
+            else { control.beginPress(at: point) }
         }
         return true
     }
