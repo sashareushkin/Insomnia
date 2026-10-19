@@ -108,8 +108,11 @@ final class HoldMouseTests: XCTestCase {
         surface.onCancel = { cancels += 1 }
         surface.onRelease = { releases += 1 }
         var pointer = NSPoint.zero
-        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { pointer }, buttonIsDown: { true })
+        var physicalDown = false
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { pointer }, buttonIsDown: { physicalDown })
         func mouse(_ type: NSEvent.EventType, point: NSPoint) -> NSEvent {
+            if type == .leftMouseDown { physicalDown = true }
+            if type == .leftMouseUp { physicalDown = false }
             pointer = replica.convertPoint(toScreen: point)
             // Mirror the real status bar: every mouse event reports the
             // replica centre, even when the pointer is over the cross.
@@ -183,6 +186,34 @@ final class HoldMouseTests: XCTestCase {
         try await Task.sleep(for: .seconds(0.7))
         XCTAssertEqual(ended, 1)
         XCTAssertFalse(state.holding)
+    }
+
+    func testSyntheticMouseUpDoesNotCancelAPhysicallyHeldButton() throws {
+        let host = NSHostingView(rootView: HoldMouseSurface(onPress: { _ in }, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
+        let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 40, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        defer { window.contentView = nil }
+        host.layoutSubtreeIfNeeded()
+        func find(_ view: NSView) -> HoldMouseView? {
+            (view as? HoldMouseView) ?? view.subviews.lazy.compactMap { find($0) }.first
+        }
+        let surface = try XCTUnwrap(find(host))
+        var releases = 0
+        surface.onRelease = { releases += 1 }
+        var down = true
+        let point = window.convertPoint(toScreen: surface.convert(NSPoint(x: 10, y: 10), to: nil))
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { point }, buttonIsDown: { down })
+        func mouse(_ type: NSEvent.EventType) -> NSEvent {
+            NSEvent.mouseEvent(with: type, location: NSPoint(x: 20, y: 12), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+        }
+        XCTAssertTrue(router.route(mouse(.leftMouseDown)))
+        XCTAssertTrue(router.route(mouse(.leftMouseUp)))
+        XCTAssertEqual(releases, 0)
+        XCTAssertTrue(surface.canCompletePress)
+        down = false
+        XCTAssertTrue(router.route(mouse(.leftMouseUp)))
+        XCTAssertEqual(releases, 1)
+        XCTAssertFalse(surface.canCompletePress)
     }
 
     func testMenuEndIsOnlyActiveAndHasItsOwnSelector() {

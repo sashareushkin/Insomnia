@@ -219,6 +219,10 @@ final class StatusHoldMouseRouter {
             case .leftMouseDragged:
                 captured.dragPress(to: pointerLocation())
             case .leftMouseUp:
+                // A replica can deliver a synthetic click pair while the
+                // physical button is still down. The pointer poll owns the
+                // actual release in that case; don't abort a real hold.
+                guard !buttonIsDown() else { return true }
                 captured.releasePress()
                 self.captured = nil
                 stopPolling()
