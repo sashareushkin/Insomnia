@@ -134,13 +134,14 @@ final class HoldMouseView: NSView {
             return
         }
         guard origin == nil else { return }
-        origin = event.locationInWindow
+        origin = Self.screenPoint(event)
         cancelled = false
         onPress?()
     }
     override func mouseDragged(with event: NSEvent) {
         guard let origin, !cancelled else { return }
-        if hypot(event.locationInWindow.x - origin.x, event.locationInWindow.y - origin.y) > 12 {
+        let point = Self.screenPoint(event)
+        if hypot(point.x - origin.x, point.y - origin.y) > 12 {
             cancelled = true
             onCancel?()
         }
@@ -150,6 +151,9 @@ final class HoldMouseView: NSView {
         origin = nil
         onRelease?()
     }
+    private static func screenPoint(_ event: NSEvent) -> NSPoint {
+        event.window?.convertPoint(toScreen: event.locationInWindow) ?? event.locationInWindow
+    }
     func cancelPress() {
         guard origin != nil else { return }
         origin = nil
@@ -158,5 +162,68 @@ final class HoldMouseView: NSView {
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         if newWindow == nil { cancelPress() }
         super.viewWillMove(toWindow: newWindow)
+    }
+}
+
+/// Status-bar windows can handle a press before SwiftUI's hosted responders.
+/// Route the complete cross sequence before NSWindow/NSButton tracking starts.
+/// Geometry comes from the laid-out native surface, never a hard-coded inset.
+@MainActor
+final class StatusHoldMouseRouter {
+    private weak var host: NSView?
+    private var captured: HoldMouseView?
+    private var monitor: Any?
+
+    init(host: NSView, installMonitor: Bool = true) {
+        self.host = host
+        if installMonitor {
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown]) { [weak self] event in
+                let consumed = MainActor.assumeIsolated { self?.route(event) == true }
+                return consumed ? nil : event
+            }
+        }
+    }
+
+    isolated deinit {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        captured?.cancelPress()
+    }
+
+    /// True means consumed, including the rest of a cancelled gesture.
+    func route(_ event: NSEvent) -> Bool {
+        if let captured {
+            switch event.type {
+            case .leftMouseDragged:
+                if captured.window == nil { captured.cancelPress() }
+                else { captured.mouseDragged(with: event) }
+            case .leftMouseUp:
+                captured.mouseUp(with: event)
+                self.captured = nil
+            case .rightMouseDown:
+                captured.rightMouseDown(with: event)
+            default: break
+            }
+            return true
+        }
+        guard event.type == .leftMouseDown || event.type == .rightMouseDown,
+              let host, let window = host.window, let source = event.window,
+              source.level == window.level else { return false }
+        let point = source.convertPoint(toScreen: event.locationInWindow)
+        func surface(in view: NSView) -> HoldMouseView? {
+            guard !view.isHidden, view.alphaValue > 0 else { return nil }
+            if let control = view as? HoldMouseView {
+                let frame = window.convertToScreen(control.convert(control.bounds, to: nil)).intersection(window.frame)
+                return frame.contains(point) ? control : nil
+            }
+            return view.subviews.lazy.compactMap { surface(in: $0) }.first
+        }
+        guard let control = surface(in: host) else { return false }
+        if event.type == .rightMouseDown {
+            control.rightMouseDown(with: event)
+        } else {
+            captured = control
+            control.mouseDown(with: event)
+        }
+        return true
     }
 }

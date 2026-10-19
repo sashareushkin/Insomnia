@@ -34,6 +34,7 @@ final class StatusItemController: NSObject {
 
     private let statusItem: NSStatusItem
     private var hostingView: StatusHostingView?
+    private var holdMouseRouter: StatusHoldMouseRouter?
     private var widthWriter: StatusWidthWriter?
 
     private var keyMonitor: Any?
@@ -128,6 +129,7 @@ final class StatusItemController: NSObject {
         // SwiftUI handles the clicks; the cell must not paint a highlight.
         (button.cell as? NSButtonCell)?.highlightsBy = []
         hostingView = host
+        holdMouseRouter = StatusHoldMouseRouter(host: host)
         // The layout may already have reported through `onGeometryChange`
         // while the host was measured above, before `hostingView` was set,
         // in which case `retargetWidth` treats the fitting width as a

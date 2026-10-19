@@ -90,6 +90,65 @@ final class HoldMouseTests: XCTestCase {
         window.contentView = nil
     }
 
+    func testRouterConsumesReplicaWindowSequenceAndUsesCurrentGeometry() throws {
+        let host = NSHostingView(rootView: HoldMouseSurface(onPress: {}, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
+        let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 100, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        let replica = NSWindow(contentRect: window.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        defer { window.contentView = nil }
+        host.layoutSubtreeIfNeeded()
+        func find(_ view: NSView) -> HoldMouseView? {
+            (view as? HoldMouseView) ?? view.subviews.lazy.compactMap { find($0) }.first
+        }
+        let surface = try XCTUnwrap(find(host))
+        var presses = 0
+        var cancels = 0
+        var releases = 0
+        surface.onPress = { presses += 1 }
+        surface.onCancel = { cancels += 1 }
+        surface.onRelease = { releases += 1 }
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false)
+        func mouse(_ type: NSEvent.EventType, point: NSPoint) -> NSEvent {
+            NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: 0, windowNumber: replica.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+        }
+        for width: CGFloat in [100, 160, 80] {
+            window.setContentSize(NSSize(width: width, height: 24))
+            replica.setFrame(window.frame, display: false)
+            host.layoutSubtreeIfNeeded()
+            let center = surface.convert(NSPoint(x: 10, y: 10), to: nil)
+            XCTAssertFalse(router.route(mouse(.leftMouseDown, point: NSPoint(x: 1, y: 1))), "The eye/countdown must keep their usual route")
+            XCTAssertTrue(router.route(mouse(.leftMouseDown, point: center)))
+            XCTAssertTrue(router.route(mouse(.leftMouseDragged, point: NSPoint(x: center.x + 13, y: center.y))))
+            XCTAssertTrue(router.route(mouse(.leftMouseDragged, point: center)))
+            XCTAssertTrue(router.route(mouse(.leftMouseUp, point: center)))
+        }
+        XCTAssertEqual(presses, 3)
+        XCTAssertEqual(cancels, 3)
+        XCTAssertEqual(releases, 3)
+        surface.removeFromSuperview()
+        XCTAssertFalse(router.route(mouse(.leftMouseDown, point: NSPoint(x: 50, y: 10))), "Idle/removed surface cannot capture clicks")
+    }
+
+    func testVisibleCountdownReadsTheClockWhileLidRedrawIsPaused() async {
+        let h = Harness()
+        defer { h.home.destroy() }
+        let manager = h.makeManager()
+        await manager.start(duration: 3600)
+        manager.pauseCountdown()
+        XCTAssertFalse(manager.countdownTimerArmed)
+        let frozen = manager.countdownText
+        let session = manager.session
+        h.clock.advance(5)
+        XCTAssertEqual(manager.countdownText, frozen)
+        XCTAssertEqual(manager.presentationCountdownText(), "0:59:55")
+        h.clock.advance(2)
+        XCTAssertEqual(manager.presentationCountdownText(), "0:59:53")
+        XCTAssertFalse(manager.countdownTimerArmed, "Presentation must not resume the bag redraw timer")
+        XCTAssertEqual(manager.session, session, "Rendering must not move the deadline")
+        await manager.end(reason: .user)
+        XCTAssertEqual(manager.presentationCountdownText(), "")
+    }
+
     func testMenuEndIsOnlyActiveAndHasItsOwnSelector() {
         for active in [false, true] {
             let items = StatusMenu.items(sessionActive: active, sleepHeld: false, machine: nil, actions: nil, throttledBrowsers: [], error: nil)
