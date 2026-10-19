@@ -107,6 +107,15 @@ there, inspect both implementations and open a replacement PR into custom.
 Never use GitHub's Update branch button on mirror main. Close the original
 sync PR after the replacement is merged; if it stays open, sync reuses it.
 
+GitHub may require an additional Workflows write permission when upstream changes
+workflow files ([Git reference API permissions](https://docs.github.com/en/rest/git/refs#update-a-reference)).
+GITHUB_TOKEN has no configurable Workflows permission. If GitHub rejects such an
+update, sync stops without overwriting main and prints the API error. The owner
+can use the already verified SSH transport for a manual fast-forward of main
+from upstream, then rerun sync to create/reuse the integration PR. Do not add a
+personal secret, expand permissions, or force the update implicitly. This case
+cannot be accepted live until an upstream update is available.
+
 Both workflows must remain active on default custom. Original workflows are retained unchanged for upstream compatibility and static
 workflow tests, and disabled at repository level; main retains original files. Inspect Actions state after upstream workflow changes.
 Repository Actions is enabled, workflow default token permission is read, and

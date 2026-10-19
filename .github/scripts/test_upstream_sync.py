@@ -2,6 +2,10 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
+import json
+import subprocess
 
 spec = importlib.util.spec_from_file_location('sync', Path(__file__).with_name('upstream-sync.py'))
 sync = importlib.util.module_from_spec(spec)
@@ -39,6 +43,17 @@ class FakeAPI:
 
 
 class SyncTests(unittest.TestCase):
+    def test_transport_preserves_non_forced_boolean(self):
+        with patch.object(sync.subprocess, 'run', return_value=SimpleNamespace(stdout='{}')) as run:
+            sync.api('repos/owner/fork/git/refs/heads/main', 'PATCH', sha='new', force=False)
+            self.assertIs(json.loads(run.call_args.kwargs['input'])['force'], False)
+
+    def test_transport_reports_github_permission_error(self):
+        error = subprocess.CalledProcessError(1, ['gh', 'api'], stderr='HTTP 403: workflows permission required')
+        with patch.object(sync.subprocess, 'run', side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, 'HTTP 403: workflows permission required'):
+                sync.api('repos/owner/fork/git/refs/heads/main', 'PATCH', sha='new', force=False)
+
     def test_no_updates_no_writes(self):
         fake = FakeAPI(mirror='new', integrated=True)
         self.assertIsNone(sync.synchronize('owner/fork', fake))

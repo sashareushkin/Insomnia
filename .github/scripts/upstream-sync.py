@@ -11,8 +11,12 @@ def api(path, method='GET', **fields):
     command = ['gh', 'api', '-X', method, path]
     if fields:
         command += ['--input', '-']
-    result = subprocess.run(command, input=json.dumps(fields) if fields else None,
-                            text=True, capture_output=True, check=True)
+    try:
+        result = subprocess.run(command, input=json.dumps(fields) if fields else None,
+                                text=True, capture_output=True, check=True)
+    except subprocess.CalledProcessError as error:
+        # Keep GitHub's actionable permission/conflict message in the Actions log.
+        raise RuntimeError(f'GitHub API {method} {path}: {error.stderr.strip() or str(error)}') from error
     return json.loads(result.stdout) if result.stdout.strip() else None
 
 
