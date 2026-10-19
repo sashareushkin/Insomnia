@@ -1,3 +1,7 @@
+> **Modified Insomnia fork** maintained at [sashareushkin/Insomnia](https://github.com/sashareushkin/Insomnia), based on [krishhgg/Insomnia](https://github.com/krishhgg/Insomnia) by the original author, krishhgg. Our default branch is `custom`; `main` is the upstream mirror. The original MIT license and copyright attribution remain in [LICENSE](LICENSE). No application changes or fork releases yet.
+>
+> Development: [fork workflow](docs/fork-workflow.md), [agent instructions](AGENTS.md), [fork changes](docs/fork-changes.md). Download/install/release references below refer to the original project; our release channels are not configured.
+
 <p align="center">
   <img src="docs/assets/eye-open.svg" alt="Insomnia: an open eye with a round pupil and five lashes above it" width="112">
 </p>
