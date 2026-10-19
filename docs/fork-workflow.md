@@ -91,9 +91,8 @@ there, inspect both implementations and open a replacement PR into custom.
 Never use GitHub's Update branch button on mirror main. Close the original
 sync PR after the replacement is merged; if it stays open, sync reuses it.
 
-Both workflows must remain active on default custom. Original workflows are
-absent from custom and disabled at repository level when GitHub registers them;
-main retains original files. Inspect Actions state after upstream workflow changes.
+Both workflows must remain active on default custom. Original workflows are retained unchanged for upstream compatibility and static
+workflow tests, and disabled at repository level; main retains original files. Inspect Actions state after upstream workflow changes.
 Repository Actions is enabled, workflow default token permission is read, and
 Actions may create PRs. GitHub can disable scheduled workflows after inactivity;
 check for disabled_inactivity and re-enable upstream-sync.yml if needed.
