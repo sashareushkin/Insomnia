@@ -12,6 +12,7 @@ final class UIStatusTests: XCTestCase {
             let h = Harness()
             let manager = h.makeManager()
             await manager.start(duration: 3600)
+            XCTAssertTrue(manager.isActive)
             let controller = StatusItemController(manager: manager, status: PlaceholderStatus(), showSettings: {})
             let gate = AsyncGate()
             if restoreFails {
@@ -25,7 +26,11 @@ final class UIStatusTests: XCTestCase {
             // record() throws before restoreGate on a refusal, so only
             // the successful restore can be held at that boundary.
             if !restoreFails {
-                await gate.waitUntilStarted()
+                let restoreBy = Date().addingTimeInterval(3)
+                while h.guardFake.restoreCalledAt == nil, Date() < restoreBy {
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                XCTAssertNotNil(h.guardFake.restoreCalledAt, "The menu must reach the safe restore path")
                 controller.holdToEnd()
                 XCTAssertEqual(h.guardFake.calls.filter { $0 == "disablesleep 0" }.count, 1)
                 await gate.open()
