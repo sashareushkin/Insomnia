@@ -80,7 +80,7 @@ struct StatusRootView: View {
             } else if showsCountdown {
                 countdown
                 if showsRunningControls {
-                    HoldToEndButton(reduceMotion: reduceMotion, action: onHoldEnd)
+                    HoldToEndButton(reduceMotion: reduceMotion, action: onHoldEnd, state: model.endHold)
                         .transition(Motion.ringTransition(reduceMotion: reduceMotion))
                 }
             }

@@ -11,10 +11,9 @@ struct HoldToEndButton: View {
     let reduceMotion: Bool
     let action: () -> Void
 
-    @State private var progress: CGFloat = 0
-    /// Mouse is down and the ring is drawing.
-    @State private var holding = false
-    @State private var holdTask: Task<Void, Never>?
+    var state: EndHoldState? = nil
+    @State private var localState = EndHoldState()
+    private var hold: EndHoldState { state ?? localState }
 
     private let ringDiameter: CGFloat = 18
     private let lineWidth: CGFloat = 1.6
@@ -24,7 +23,7 @@ struct HoldToEndButton: View {
             Circle()
                 .stroke(Color.white.opacity(0.14), lineWidth: lineWidth)
             Circle()
-                .trim(from: 0, to: progress)
+                .trim(from: 0, to: hold.progress)
                 .stroke(Color(brand: BrandPalette.violet), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Image(systemName: "xmark")
@@ -32,79 +31,85 @@ struct HoldToEndButton: View {
                 .foregroundStyle(Color.white.opacity(0.85))
         }
         .frame(width: ringDiameter, height: ringDiameter)
-        .scaleEffect(holding && !reduceMotion ? 1.12 : 1)
-        .animation(Motion.snappy(reduceMotion: reduceMotion), value: holding)
+        .scaleEffect(hold.holding && !reduceMotion ? 1.12 : 1)
+        .animation(Motion.snappy(reduceMotion: reduceMotion), value: hold.holding)
         .frame(width: 20, height: 20)
         .contentShape(Rectangle())
         .overlay {
-            HoldMouseSurface(onPress: {
-                begin()
+            HoldMouseSurface(onPress: { stillPressed in
+                hold.begin(reduceMotion: reduceMotion, stillPressed: stillPressed, action: { action() })
             }, onCancel: {
-                release()
+                hold.cancel()
             }, onRelease: {
-                release()
-            })
+                hold.cancel()
+            }, cancelOnRemoval: state == nil)
         }
-        .onDisappear { release() }
+        .onDisappear { if state == nil { hold.cancel() } }
         .help("Hold to end the session")
         .accessibilityLabel("End session")
         .accessibilityHint("Press and hold")
         .accessibilityAction { action() }
     }
 
-    /// Start drawing the ring and arm the completion.
-    private func begin() {
+}
+
+/// Owned by the menu-bar model: snapshot/reparenting of SwiftUI/native views
+/// must not cancel a physical press. Only release, movement, session end or
+/// controller teardown cancel it.
+@MainActor
+@Observable
+final class EndHoldState {
+    private(set) var progress: CGFloat = 0
+    private(set) var holding = false
+    @ObservationIgnored private var task: Task<Void, Never>?
+    private var reduceMotion = false
+
+    func begin(reduceMotion: Bool, stillPressed: @escaping @MainActor () -> Bool, action: @escaping @MainActor () -> Void) {
+        cancel()
+        self.reduceMotion = reduceMotion
         holding = true
-        let duration = Motion.holdDuration
-        withAnimation(.linear(duration: duration)) {
-            progress = 1
-        }
-        holdTask?.cancel()
-        holdTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(duration))
+        withAnimation(.linear(duration: Motion.holdDuration)) { progress = 1 }
+        task = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Motion.holdDuration))
             guard !Task.isCancelled, holding else { return }
-            fire()
+            guard stillPressed() else { cancel(); return }
+            task = nil
+            holding = false
+            action()
+            withAnimation(Motion.snappy(reduceMotion: reduceMotion)) { progress = 0 }
         }
     }
 
-    /// Released or dragged away before the ring closed: no action.
-    private func release() {
-        holdTask?.cancel()
-        holdTask = nil
+    func cancel() {
+        task?.cancel()
+        task = nil
         holding = false
-        withAnimation(Motion.snappy(reduceMotion: reduceMotion)) {
-            progress = 0
-        }
+        withAnimation(Motion.snappy(reduceMotion: reduceMotion)) { progress = 0 }
     }
 
-    private func fire() {
-        holdTask = nil
-        holding = false
-        action()
-        // The view normally leaves with the session; if it stays (nothing to
-        // end), the ring settles back so a second hold starts clean.
-        withAnimation(Motion.snappy(reduceMotion: reduceMotion)) {
-            progress = 0
-        }
-    }
+    isolated deinit { task?.cancel() }
 }
 
 /// Own the complete mouse sequence at the AppKit boundary. A cancelled press
 /// stays consumed until mouse-up; it must never fall through to the status
 /// button or be interpreted as a click on the extension editor.
 struct HoldMouseSurface: NSViewRepresentable {
-    let onPress: () -> Void
+    let onPress: (@escaping @MainActor () -> Bool) -> Void
     let onCancel: () -> Void
     let onRelease: () -> Void
+    var cancelOnRemoval = true
 
     func makeNSView(context: Context) -> HoldMouseView { HoldMouseView() }
     func updateNSView(_ view: HoldMouseView, context: Context) {
-        view.onPress = onPress
+        view.onPress = { [weak view] in
+            onPress { [weak view] in view?.canCompletePress == true }
+        }
+        view.cancelOnRemoval = cancelOnRemoval
         view.onCancel = onCancel
         view.onRelease = onRelease
     }
     static func dismantleNSView(_ view: HoldMouseView, coordinator: ()) {
-        view.cancelPress()
+        if view.cancelOnRemoval { view.cancelPress() }
     }
 }
 
@@ -112,6 +117,10 @@ final class HoldMouseView: NSView {
     var onPress: (() -> Void)?
     var onCancel: (() -> Void)?
     var onRelease: (() -> Void)?
+    var cancelOnRemoval = true
+    var completionCheck: (@MainActor () -> Bool)?
+    var pressWithinThreshold: Bool { origin != nil && !cancelled }
+    var canCompletePress: Bool { pressWithinThreshold && (completionCheck?() ?? true) }
     private var origin: NSPoint?
     private var cancelled = false
 
@@ -166,7 +175,7 @@ final class HoldMouseView: NSView {
         onCancel?()
     }
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if newWindow == nil { cancelPress() }
+        if newWindow == nil, cancelOnRemoval { cancelPress() }
         super.viewWillMove(toWindow: newWindow)
     }
 }
@@ -180,10 +189,15 @@ final class StatusHoldMouseRouter {
     private var captured: HoldMouseView?
     private var monitor: Any?
     private let pointerLocation: @MainActor () -> NSPoint
+    private let buttonIsDown: @MainActor () -> Bool
+    private var poll: Timer?
+    private let watchesPointer: Bool
 
-    init(host: NSView, installMonitor: Bool = true, pointerLocation: @escaping @MainActor () -> NSPoint = { NSEvent.mouseLocation }) {
+    init(host: NSView, installMonitor: Bool = true, pointerLocation: @escaping @MainActor () -> NSPoint = { NSEvent.mouseLocation }, buttonIsDown: @escaping @MainActor () -> Bool = { NSEvent.pressedMouseButtons & 1 != 0 }) {
         self.host = host
         self.pointerLocation = pointerLocation
+        self.buttonIsDown = buttonIsDown
+        self.watchesPointer = installMonitor
         if installMonitor {
             monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown]) { [weak self] event in
                 let consumed = MainActor.assumeIsolated { self?.route(event) == true }
@@ -194,6 +208,7 @@ final class StatusHoldMouseRouter {
 
     isolated deinit {
         if let monitor { NSEvent.removeMonitor(monitor) }
+        poll?.invalidate()
         captured?.cancelPress()
     }
 
@@ -202,13 +217,19 @@ final class StatusHoldMouseRouter {
         if let captured {
             switch event.type {
             case .leftMouseDragged:
-                if captured.window == nil { captured.cancelPress() }
-                else { captured.dragPress(to: pointerLocation()) }
+                captured.dragPress(to: pointerLocation())
             case .leftMouseUp:
                 captured.releasePress()
                 self.captured = nil
+                stopPolling()
+            case .leftMouseDown:
+                captured.cancelPress()
+                self.captured = nil
+                stopPolling()
+                return route(event)
             case .rightMouseDown:
                 captured.rightMouseDown(with: event)
+                stopPolling()
             default: break
             }
             return true
@@ -234,9 +255,38 @@ final class StatusHoldMouseRouter {
             control.rightMouseDown(with: event)
         } else {
             captured = control
+            control.completionCheck = { [weak self, weak control] in
+                guard let self, let control, self.buttonIsDown() else { return false }
+                control.dragPress(to: self.pointerLocation())
+                return control.pressWithinThreshold
+            }
             if event.modifierFlags.contains(.control) { control.rightMouseDown(with: event) }
-            else { control.beginPress(at: point) }
+            else { control.beginPress(at: point); startPolling() }
         }
         return true
     }
+    private func stopPolling() {
+        poll?.invalidate()
+        poll = nil
+    }
+
+    private func startPolling() {
+        stopPolling()
+        guard watchesPointer else { return }
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let captured = self.captured else { return }
+                if !self.buttonIsDown() {
+                    captured.releasePress()
+                    self.stopPolling()
+                } else {
+                    captured.dragPress(to: self.pointerLocation())
+                    if !captured.pressWithinThreshold { self.stopPolling() }
+                }
+            }
+        }
+        poll = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
 }

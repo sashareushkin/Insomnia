@@ -40,7 +40,7 @@ final class HoldMouseTests: XCTestCase {
     }
 
     func testNativeSurfaceWinsHostingHitTestAfterResize() throws {
-        let host = NSHostingView(rootView: HoldMouseSurface(onPress: {}, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
+        let host = NSHostingView(rootView: HoldMouseSurface(onPress: { _ in }, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
         host.frame = NSRect(x: 0, y: 0, width: 20, height: 24)
         let button = NSButton(frame: host.frame)
         button.addSubview(host)
@@ -91,7 +91,7 @@ final class HoldMouseTests: XCTestCase {
     }
 
     func testRouterUsesRealPointerWhenReplicaEventsReportTheWindowCentre() throws {
-        let host = NSHostingView(rootView: HoldMouseSurface(onPress: {}, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
+        let host = NSHostingView(rootView: HoldMouseSurface(onPress: { _ in }, onCancel: {}, onRelease: {}).frame(width: 20, height: 20))
         let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 100, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = host
         let replica = NSWindow(contentRect: window.frame, styleMask: [.borderless], backing: .buffered, defer: false)
@@ -108,7 +108,7 @@ final class HoldMouseTests: XCTestCase {
         surface.onCancel = { cancels += 1 }
         surface.onRelease = { releases += 1 }
         var pointer = NSPoint.zero
-        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { pointer })
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { pointer }, buttonIsDown: { true })
         func mouse(_ type: NSEvent.EventType, point: NSPoint) -> NSEvent {
             pointer = replica.convertPoint(toScreen: point)
             // Mirror the real status bar: every mouse event reports the
@@ -151,6 +151,38 @@ final class HoldMouseTests: XCTestCase {
         XCTAssertEqual(manager.session, session, "Rendering must not move the deadline")
         await manager.end(reason: .user)
         XCTAssertEqual(manager.presentationCountdownText(), "")
+    }
+
+    func testHoldSurvivesSnapshotViewRemovalButChecksPhysicalRelease() async throws {
+        let state = EndHoldState()
+        var ended = 0
+        let host = NSHostingView(rootView: HoldToEndButton(reduceMotion: true, action: { ended += 1 }, state: state))
+        let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 40, height: 24), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        defer { window.contentView = nil }
+        host.layoutSubtreeIfNeeded()
+        func find(_ view: NSView) -> HoldMouseView? {
+            (view as? HoldMouseView) ?? view.subviews.lazy.compactMap { find($0) }.first
+        }
+        let surface = try XCTUnwrap(find(host))
+        let point = window.convertPoint(toScreen: surface.convert(NSPoint(x: 10, y: 10), to: nil))
+        let router = StatusHoldMouseRouter(host: host, installMonitor: false, pointerLocation: { point }, buttonIsDown: { true })
+        let down = NSEvent.mouseEvent(with: .leftMouseDown, location: NSPoint(x: 20, y: 12), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1)!
+        XCTAssertTrue(router.route(down))
+        XCTAssertTrue(state.holding)
+        surface.removeFromSuperview() // status-bar snapshot reparenting
+        try await Task.sleep(for: .seconds(0.7))
+        XCTAssertEqual(ended, 1)
+        XCTAssertFalse(state.holding)
+        try await Task.sleep(for: .seconds(0.7))
+        XCTAssertEqual(ended, 1)
+
+        var downPhysically = true
+        state.begin(reduceMotion: true, stillPressed: { downPhysically }) { ended += 1 }
+        downPhysically = false // interrupted sequence with no delivered mouseUp
+        try await Task.sleep(for: .seconds(0.7))
+        XCTAssertEqual(ended, 1)
+        XCTAssertFalse(state.holding)
     }
 
     func testMenuEndIsOnlyActiveAndHasItsOwnSelector() {

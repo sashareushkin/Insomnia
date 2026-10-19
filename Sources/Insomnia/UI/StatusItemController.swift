@@ -228,6 +228,7 @@ final class StatusItemController: NSObject {
     }
 
     private func managerChanged() {
+        if !manager.isActive { model.endHold.cancel() }
         reminder.sync(endsAt: manager.session?.endsAt)
         if let next = Self.phase(forActive: manager.isActive, phase: model.phase) {
             switch next {
