@@ -14,15 +14,22 @@ final class UIStatusTests: XCTestCase {
             await manager.start(duration: 3600)
             let controller = StatusItemController(manager: manager, status: PlaceholderStatus(), showSettings: {})
             let gate = AsyncGate()
-            h.guardFake.restoreGate = gate
-            if restoreFails { h.guardFake.throwOn = ["disablesleep 0"] }
+            if restoreFails {
+                h.guardFake.throwOn = ["disablesleep 0"]
+            } else {
+                h.guardFake.restoreGate = gate
+            }
             XCTAssertTrue(controller.responds(to: NSSelectorFromString("menuEndSession")))
             controller.perform(NSSelectorFromString("menuEndSession"))
             controller.holdToEnd()
-            await gate.waitUntilStarted()
-            controller.holdToEnd()
-            XCTAssertEqual(h.guardFake.calls.filter { $0 == "disablesleep 0" }.count, 1)
-            await gate.open()
+            // record() throws before restoreGate on a refusal, so only
+            // the successful restore can be held at that boundary.
+            if !restoreFails {
+                await gate.waitUntilStarted()
+                controller.holdToEnd()
+                XCTAssertEqual(h.guardFake.calls.filter { $0 == "disablesleep 0" }.count, 1)
+                await gate.open()
+            }
             let deadline = Date().addingTimeInterval(3)
             while (restoreFails ? manager.lastError == nil : manager.isActive), Date() < deadline {
                 try await Task.sleep(for: .milliseconds(10))
