@@ -14,16 +14,10 @@ struct HoldToEndButton: View {
     @State private var progress: CGFloat = 0
     /// Mouse is down and the ring is drawing.
     @State private var holding = false
-    /// A press is in flight (even after it was cancelled by dragging away),
-    /// so a single gesture never restarts the hold.
-    @State private var pressed = false
     @State private var holdTask: Task<Void, Never>?
 
     private let ringDiameter: CGFloat = 18
     private let lineWidth: CGFloat = 1.6
-    /// Moving the pointer this far cancels the hold, so a drag that happens
-    /// to start on the button does not end the session.
-    private let cancelDistance: CGFloat = 12
 
     var body: some View {
         ZStack {
@@ -42,21 +36,16 @@ struct HoldToEndButton: View {
         .animation(Motion.snappy(reduceMotion: reduceMotion), value: holding)
         .frame(width: 20, height: 20)
         .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    if !pressed {
-                        pressed = true
-                        begin()
-                    } else if holding, hypot(value.translation.width, value.translation.height) > cancelDistance {
-                        release()
-                    }
-                }
-                .onEnded { _ in
-                    pressed = false
-                    if holding { release() }
-                }
-        )
+        .overlay {
+            HoldMouseSurface(onPress: {
+                begin()
+            }, onCancel: {
+                release()
+            }, onRelease: {
+                release()
+            })
+        }
+        .onDisappear { release() }
         .help("Hold to end the session")
         .accessibilityLabel("End session")
         .accessibilityHint("Press and hold")
@@ -97,5 +86,77 @@ struct HoldToEndButton: View {
         withAnimation(Motion.snappy(reduceMotion: reduceMotion)) {
             progress = 0
         }
+    }
+}
+
+/// Own the complete mouse sequence at the AppKit boundary. A cancelled press
+/// stays consumed until mouse-up; it must never fall through to the status
+/// button or be interpreted as a click on the extension editor.
+struct HoldMouseSurface: NSViewRepresentable {
+    let onPress: () -> Void
+    let onCancel: () -> Void
+    let onRelease: () -> Void
+
+    func makeNSView(context: Context) -> HoldMouseView { HoldMouseView() }
+    func updateNSView(_ view: HoldMouseView, context: Context) {
+        view.onPress = onPress
+        view.onCancel = onCancel
+        view.onRelease = onRelease
+    }
+    static func dismantleNSView(_ view: HoldMouseView, coordinator: ()) {
+        view.cancelPress()
+    }
+}
+
+final class HoldMouseView: NSView {
+    var onPress: (() -> Void)?
+    var onCancel: (() -> Void)?
+    var onRelease: (() -> Void)?
+    private var origin: NSPoint?
+    private var cancelled = false
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func rightMouseDown(with event: NSEvent) {
+        cancelPress()
+        var ancestor = superview
+        while let view = ancestor {
+            if let host = view as? StatusHostingView {
+                host.rightMouseDown(with: event)
+                return
+            }
+            ancestor = view.superview
+        }
+        super.rightMouseDown(with: event)
+    }
+    override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.control) {
+            rightMouseDown(with: event)
+            return
+        }
+        guard origin == nil else { return }
+        origin = event.locationInWindow
+        cancelled = false
+        onPress?()
+    }
+    override func mouseDragged(with event: NSEvent) {
+        guard let origin, !cancelled else { return }
+        if hypot(event.locationInWindow.x - origin.x, event.locationInWindow.y - origin.y) > 12 {
+            cancelled = true
+            onCancel?()
+        }
+    }
+    override func mouseUp(with event: NSEvent) {
+        guard origin != nil else { return }
+        origin = nil
+        onRelease?()
+    }
+    func cancelPress() {
+        guard origin != nil else { return }
+        origin = nil
+        onCancel?()
+    }
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { cancelPress() }
+        super.viewWillMove(toWindow: newWindow)
     }
 }

@@ -3,6 +3,43 @@ import XCTest
 @testable import Insomnia
 
 final class UIStatusTests: XCTestCase {
+    /// Hosted CI only: controller creates a real status item, while every
+    /// session effect and journal is supplied by the disposable harness.
+    @MainActor
+    func testMenuAndHoldShareOneSafeEndRequest() async throws {
+        _ = NSApplication.shared
+        for restoreFails in [false, true] {
+            let h = Harness()
+            let manager = h.makeManager()
+            await manager.start(duration: 3600)
+            let controller = StatusItemController(manager: manager, status: PlaceholderStatus(), showSettings: {})
+            let gate = AsyncGate()
+            h.guardFake.restoreGate = gate
+            if restoreFails { h.guardFake.throwOn = ["disablesleep 0"] }
+            XCTAssertTrue(controller.responds(to: NSSelectorFromString("menuEndSession")))
+            controller.perform(NSSelectorFromString("menuEndSession"))
+            controller.holdToEnd()
+            await gate.waitUntilStarted()
+            controller.holdToEnd()
+            XCTAssertEqual(h.guardFake.calls.filter { $0 == "disablesleep 0" }.count, 1)
+            await gate.open()
+            let deadline = Date().addingTimeInterval(3)
+            while (restoreFails ? manager.lastError == nil : manager.isActive), Date() < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            if restoreFails {
+                XCTAssertNotNil(manager.lastError)
+                XCTAssertTrue(try h.store.loadState()?.sleepDisabledByUs == true)
+                XCTAssertFalse(h.notifier.posts.contains { $0.body.contains("back to normal") })
+            } else {
+                XCTAssertFalse(manager.isActive)
+                XCTAssertFalse(h.guardFake.sleepDisabled)
+                XCTAssertNil(try h.store.loadSession())
+            }
+            h.home.destroy()
+        }
+    }
+
     @MainActor
     func testStatusHostUsesIntrinsicSizingAndHasAnIdleFittingSize() {
         let harness = Harness()
@@ -327,6 +364,8 @@ final class UIStatusTests: XCTestCase {
             StatusMenu.Item(title: "\u{26A0} Chrome is throttled", kind: .warning),
             StatusMenu.Item(title: "Relaunch Chrome unthrottled", kind: .relaunchBrowser(Self.chrome)),
             StatusMenu.Item(title: "", kind: .separator),
+            StatusMenu.Item(title: StatusMenu.endSessionTitle, kind: .endSession),
+            StatusMenu.Item(title: "", kind: .separator),
             StatusMenu.Item(title: StatusMenu.settingsTitle, kind: .settings),
             StatusMenu.Item(title: StatusMenu.quitTitle, kind: .quit),
         ])
@@ -376,7 +415,7 @@ final class UIStatusTests: XCTestCase {
         )
         XCTAssertEqual(
             items.map(\.kind),
-            [.info, .warning, .relaunchBrowser(Self.chrome), .warning, .warning, .separator, .settings, .quit]
+            [.info, .warning, .relaunchBrowser(Self.chrome), .warning, .warning, .separator, .endSession, .separator, .settings, .quit]
         )
         XCTAssertEqual(items[3], StatusMenu.Item(
             title: "\u{26A0} Hotspot password unreadable by this build: enter it again in Settings",
@@ -469,7 +508,7 @@ final class UIStatusTests: XCTestCase {
         XCTAssertEqual(items.filter { $0.kind == .relaunchBrowser(Self.arc) }.count, 1)
         XCTAssertEqual(
             items.map(\.kind),
-            [.info, .warning, .relaunchBrowser(Self.chrome), .relaunchBrowser(Self.arc), .separator, .settings, .quit]
+            [.info, .warning, .relaunchBrowser(Self.chrome), .relaunchBrowser(Self.arc), .separator, .endSession, .separator, .settings, .quit]
         )
     }
 

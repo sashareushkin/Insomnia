@@ -611,8 +611,13 @@ final class StatusItemController: NSObject {
 
     // MARK: Session actions
 
+    private var endRequested = false
+
     private func endNow() {
+        guard manager.isActive, !endRequested else { return }
+        endRequested = true
         Task { @MainActor in
+            defer { endRequested = false }
             await manager.end(reason: .user)
         }
     }
@@ -651,6 +656,7 @@ final class StatusItemController: NSObject {
         let menu = StatusMenu.menu(
             Self.menuItems(manager: manager, status: status),
             target: self,
+            endSession: #selector(menuEndSession),
             settings: #selector(menuOpenSettings),
             quit: #selector(menuQuit),
             relaunchBrowser: #selector(menuRelaunchBrowser(_:)),
@@ -725,6 +731,8 @@ final class StatusItemController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         return alert.runModal() == .alertFirstButtonReturn
     }
+
+    @objc private func menuEndSession() { holdToEnd() }
 
     @objc private func menuQuit() {
         NSApplication.shared.terminate(nil)
