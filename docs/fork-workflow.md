@@ -37,6 +37,17 @@ git config pull.ff only
 gh repo set-default sashareushkin/Insomnia
 ```
 
+The current gh OAuth token lacks the workflow scope. Existing SSH access was
+verified and can push workflow edits without expanding token permissions:
+
+```sh
+git -c url.ssh://git@github.com/.insteadOf=https://github.com/ push -u origin feature/example
+```
+
+This per-command transport override preserves the configured HTTPS remote URLs.
+Use it for branches editing workflows if an ordinary HTTPS push is rejected.
+Do not print credentials or change global Git configuration.
+
 Always pass `-R sashareushkin/Insomnia` to gh PR/workflow commands: gh can
 otherwise select the parent repository of a fork.
 
@@ -76,11 +87,16 @@ history. Identical refs and already-integrated commits produce no changes.
 After main advances, at most one open main-to-custom PR is created or reused.
 Commit subjects and the complete comparison describe changes. GitHub computes
 conflicts; an unmergeable PR stays open. A separate explicit fork-ci dispatch
-checks refs/pull/N/merge. A separate privileged job (never executing PR code)
+checks refs/pull/N/merge and verifies its exact parents against captured head/base
+SHAs before building (a stale GitHub merge ref fails closed). A separate privileged job (never executing PR code)
 posts its result on the captured PR head, only if both head and base still match.
 This avoids depending on PR events created by GITHUB_TOKEN.
 The token needs contents:write, pull-requests:write and actions:write for dispatch;
 CI code runs with contents:read, and its separate reporting job has statuses:write.
+
+Both protected branches disallow force-push and deletion, including for admins.
+Main does not require linear history: upstream merge commits must be preserved
+by a fast-forward update. The workflow enforces ancestry and force=false.
 
 The required check is not strict/up-to-date: updating a main-to-custom PR's
 head with custom would contaminate the mirror. Before merging upstream, rerun
@@ -90,6 +106,15 @@ For conflicts create `fix/integrate-upstream` from custom, merge origin/main
 there, inspect both implementations and open a replacement PR into custom.
 Never use GitHub's Update branch button on mirror main. Close the original
 sync PR after the replacement is merged; if it stays open, sync reuses it.
+
+GitHub may require an additional Workflows write permission when upstream changes
+workflow files ([Git reference API permissions](https://docs.github.com/en/rest/git/refs#update-a-reference)).
+GITHUB_TOKEN has no configurable Workflows permission. If GitHub rejects such an
+update, sync stops without overwriting main and prints the API error. The owner
+can use the already verified SSH transport for a manual fast-forward of main
+from upstream, then rerun sync to create/reuse the integration PR. Do not add a
+personal secret, expand permissions, or force the update implicitly. This case
+cannot be accepted live until an upstream update is available.
 
 Both workflows must remain active on default custom. Original workflows are retained unchanged for upstream compatibility and static
 workflow tests, and disabled at repository level; main retains original files. Inspect Actions state after upstream workflow changes.
