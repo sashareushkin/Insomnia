@@ -58,7 +58,8 @@ jobs:
           EXPECTED_HEAD: ${{ needs.resolve.outputs.head }}
           EXPECTED_BASE: ${{ needs.resolve.outputs.base }}
         run: |
-          parents=$(git show -s --format=%P HEAD)
+          # Read raw commit headers: git show %P omits parents at a shallow boundary.
+          parents=$(git cat-file -p HEAD | sed -n 's/^parent //p' | paste -sd ' ' -)
           if [ "$parents" != "$EXPECTED_BASE $EXPECTED_HEAD" ]; then
             echo '::error::PR merge ref is stale; rerun after GitHub refreshes it'
             exit 1
