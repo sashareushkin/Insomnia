@@ -37,6 +37,17 @@ git config pull.ff only
 gh repo set-default sashareushkin/Insomnia
 ```
 
+The current gh OAuth token lacks the workflow scope. Existing SSH access was
+verified and can push workflow edits without expanding token permissions:
+
+```sh
+git -c url.ssh://git@github.com/.insteadOf=https://github.com/ push -u origin feature/example
+```
+
+This per-command transport override preserves the configured HTTPS remote URLs.
+Use it for branches editing workflows if an ordinary HTTPS push is rejected.
+Do not print credentials or change global Git configuration.
+
 Always pass `-R sashareushkin/Insomnia` to gh PR/workflow commands: gh can
 otherwise select the parent repository of a fork.
 
@@ -81,6 +92,10 @@ posts its result on the captured PR head, only if both head and base still match
 This avoids depending on PR events created by GITHUB_TOKEN.
 The token needs contents:write, pull-requests:write and actions:write for dispatch;
 CI code runs with contents:read, and its separate reporting job has statuses:write.
+
+Both protected branches disallow force-push and deletion, including for admins.
+Main does not require linear history: upstream merge commits must be preserved
+by a fast-forward update. The workflow enforces ancestry and force=false.
 
 The required check is not strict/up-to-date: updating a main-to-custom PR's
 head with custom would contaminate the mirror. Before merging upstream, rerun
