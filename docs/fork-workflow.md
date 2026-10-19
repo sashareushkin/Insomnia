@@ -87,7 +87,8 @@ history. Identical refs and already-integrated commits produce no changes.
 After main advances, at most one open main-to-custom PR is created or reused.
 Commit subjects and the complete comparison describe changes. GitHub computes
 conflicts; an unmergeable PR stays open. A separate explicit fork-ci dispatch
-checks refs/pull/N/merge. A separate privileged job (never executing PR code)
+checks refs/pull/N/merge and verifies its exact parents against captured head/base
+SHAs before building (a stale GitHub merge ref fails closed). A separate privileged job (never executing PR code)
 posts its result on the captured PR head, only if both head and base still match.
 This avoids depending on PR events created by GITHUB_TOKEN.
 The token needs contents:write, pull-requests:write and actions:write for dispatch;

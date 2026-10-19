@@ -52,6 +52,17 @@ jobs:
         with:
           ref: ${{ needs.resolve.outputs.ref }}
           persist-credentials: false
+      - name: Verify dispatched merge parents
+        if: inputs.pr != ''
+        env:
+          EXPECTED_HEAD: ${{ needs.resolve.outputs.head }}
+          EXPECTED_BASE: ${{ needs.resolve.outputs.base }}
+        run: |
+          parents=$(git show -s --format=%P HEAD)
+          if [ "$parents" != "$EXPECTED_BASE $EXPECTED_HEAD" ]; then
+            echo '::error::PR merge ref is stale; rerun after GitHub refreshes it'
+            exit 1
+          fi
       - name: Record toolchain
         run: |
           sw_vers
