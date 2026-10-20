@@ -58,7 +58,11 @@ def synchronize(repo, call=api):
                 '## Main changes and conflict review\n\n'
                 'Commit subjects above describe upstream changes; review the complete diff, '
                 'especially recovery journal, backstop, session lifecycle and power management. '
-                'GitHub computes mergeability after opening this PR; CI tests the merge ref. '
+                'GitHub computes mergeability after opening this PR. Before merging, locally verify '
+                'the exact integration candidate with '
+                '`scripts/verify-local.sh safe --candidate origin/main --base origin/custom` and '
+                'post the generated report in the PR. Local verification is a manual review gate; '
+                'it does not create a GitHub status check. '
                 'If conflicts exist, leave this PR open and resolve them on a separate integration '
                 'branch based on custom. Never commit resolutions to mirror main. '
                 'Product decisions require the owner. No automatic merge.\n')
@@ -67,12 +71,9 @@ def synchronize(repo, call=api):
         print(f'Created PR #{pr["number"]}')
     details = call(f'{prefix}/pulls/{pr["number"]}')
     if details.get('mergeable') is False:
-        print(f'PR #{pr["number"]} has conflicts; manual resolution required; CI will fail closed')
-    # Dispatch explicitly; token-created PR events are not a reliable CI trigger.
-    # The separate CI status job binds its result to both captured head/base SHAs.
-    call(f'{prefix}/actions/workflows/fork-ci.yml/dispatches', 'POST',
-         ref='custom', inputs={'pr': str(pr['number'])})
-    print(f'CI dispatched for PR #{pr["number"]}; automatic merge is disabled')
+        print(f'PR #{pr["number"]} has conflicts; manual resolution required before local verification')
+    else:
+        print(f'PR #{pr["number"]} is open; verify its exact merge candidate locally before review')
     return pr['number']
 
 
