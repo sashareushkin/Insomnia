@@ -71,6 +71,8 @@ jobs:
           swift --version
       - name: Test upstream sync without GitHub writes
         run: python3 -m unittest discover -s .github/scripts -p 'test_upstream_sync.py' -v
+      - name: Check localization resources
+        run: python3 scripts/check-localizations.py
       - name: Build
         run: swift build
       - name: Test (isolated fixtures; no app installation)

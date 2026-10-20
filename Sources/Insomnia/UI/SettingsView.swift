@@ -20,11 +20,13 @@ struct SettingsView: View {
     /// The password field, saving, what was saved, and the notice under
     /// the field.
     @State private var hotspot = HotspotPasswordField()
+    @State private var localization = LocalizationManager.shared
     /// Names of the apps the automatic lid-close scope would freeze right
     /// now (the freeze list excluded); refreshed on appear and toggle.
     @State private var wouldFreeze: [String] = []
 
     var body: some View {
+        let language = localization.language
         Form {
             sessionSection
             lidSection
@@ -36,6 +38,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 520)
         .frame(minHeight: 560, idealHeight: 720)
+        .environment(\.locale, language.locale)
         .onAppear {
             loadPassword()
             refreshWouldFreeze()
@@ -98,14 +101,14 @@ struct SettingsView: View {
     // MARK: Sections
 
     private var sessionSection: some View {
-        Section("Session") {
+        Section(L10n.string("Session")) {
             ForEach(manager.config.presets, id: \.self) { p in
                 HStack {
                     Text(chipLabel(for: p))
                         .monospacedDigit()
                     Spacer()
                     if p == manager.config.defaultPreset {
-                        Text("default").font(.caption).foregroundStyle(.secondary)
+                        Text(L10n.string("default")).font(.caption).foregroundStyle(.secondary)
                     }
                     removeButton {
                         update { $0.presets.removeAll { $0 == p } }
@@ -113,16 +116,16 @@ struct SettingsView: View {
                 }
             }
             HStack {
-                TextField("Add preset (30m, 2h, 1h30m, 3d)", text: $newPreset)
+                TextField(L10n.string("Add preset (30m, 2h, 1h30m, 3d)"), text: $newPreset)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(addPreset)
-                Button("Add", action: addPreset)
+                Button(L10n.string("Add"), action: addPreset)
                     .disabled(DurationParser.seconds(from: newPreset) == nil)
             }
             if let presetError {
-                Text(presetError).font(.caption).foregroundStyle(.red)
+                Text(L10n.presentation(presetError)).font(.caption).foregroundStyle(.red)
             }
-            Picker("Default preset", selection: bind(\.defaultPreset)) {
+            Picker(L10n.string("Default preset"), selection: bind(\.defaultPreset)) {
                 ForEach(manager.config.presets, id: \.self) { p in
                     Text(chipLabel(for: p)).tag(p)
                 }
@@ -130,13 +133,13 @@ struct SettingsView: View {
                     Text(chipLabel(for: manager.config.defaultPreset)).tag(manager.config.defaultPreset)
                 }
             }
-            Picker("Default field", selection: bind(\.defaultFocusField)) {
+            Picker(L10n.string("Default field"), selection: bind(\.defaultFocusField)) {
                 ForEach(DurationInput.Field.allCases, id: \.self) { field in
-                    Text(field.placeholder).tag(field)
+                    Text(L10n.string(field.placeholder)).tag(field)
                 }
             }
-            .help("The pill that is focused when the pills open")
-            LabeledContent("Maximum session") {
+            .help(L10n.string("The pill that is focused when the pills open"))
+            LabeledContent(L10n.string("Maximum session")) {
                 Text(chipLabel(for: manager.config.maxDuration)).foregroundStyle(.secondary)
             }
         }
@@ -145,7 +148,7 @@ struct SettingsView: View {
     private func addPreset() {
         guard let s = DurationParser.seconds(from: newPreset) else { return }
         guard s <= manager.config.maxDuration else {
-            presetError = "Presets cannot exceed \(chipLabel(for: manager.config.maxDuration))."
+            presetError = L10n.format("Presets cannot exceed %@.", chipLabel(for: manager.config.maxDuration))
             return
         }
         presetError = nil
@@ -168,15 +171,15 @@ struct SettingsView: View {
             // notifications turned off. Stays until dismissed.
             if let notice = manager.config.lidCloseDefaultsNotice {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(notice.settingsLine)
+                    Text(L10n.presentation(notice.settingsLine))
                         .font(.callout)
                     Spacer()
-                    Button("Dismiss") { manager.dismissLidCloseNotice() }
+                    Button(L10n.string("Dismiss")) { manager.dismissLidCloseNotice() }
                 }
             }
-            Toggle("Turn off the display and keyboard backlight", isOn: bind(\.darkenDisplayOnLidClose))
+            Toggle(L10n.string("Turn off the display and keyboard backlight"), isOn: bind(\.darkenDisplayOnLidClose))
             ForEach(manager.darkenRefusals, id: \.self) { reason in
-                Text(reason)
+                Text(L10n.presentation(reason))
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
@@ -187,25 +190,25 @@ struct SettingsView: View {
                 add: { id in update { if !$0.freezeList.contains(id) { $0.freezeList.append(id) } } },
                 remove: { id in update { $0.freezeList.removeAll { $0 == id } } }
             )
-            Toggle("Freeze every other app while the lid is closed", isOn: bind(\.freezeAllApps))
-            Text(wouldFreezeText)
+            Toggle(L10n.string("Freeze every other app while the lid is closed"), isOn: bind(\.freezeAllApps))
+            Text(L10n.presentation(wouldFreezeText))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Toggle("Pause Docker Desktop when no containers are running", isOn: bind(\.dockerRule))
-            Text("Off by default. When on, Docker Desktop is paused only if a second check right before the pause still finds no running container; a container that starts in that last moment is paused with it.")
+            Toggle(L10n.string("Pause Docker Desktop when no containers are running"), isOn: bind(\.dockerRule))
+            Text(L10n.string("Off by default. When on, Docker Desktop is paused only if a second check right before the pause still finds no running container; a container that starts in that last moment is paused with it."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Toggle("Mute audio on lid close", isOn: bind(\.muteOnLidClose))
-            Text(Self.microphoneNote)
+            Toggle(L10n.string("Mute audio on lid close"), isOn: bind(\.muteOnLidClose))
+            Text(L10n.string(Self.microphoneNote))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Toggle("Low Power Mode while the lid is closed", isOn: bind(\.lowPowerOnLidClose))
+            Toggle(L10n.string("Low Power Mode while the lid is closed"), isOn: bind(\.lowPowerOnLidClose))
                 // A floor input: apply it now if the lid is already closed.
                 .onChange(of: manager.config.lowPowerOnLidClose) { manager.services?.reevaluateFloors() }
         } header: {
-            Text("Lid-close actions")
+            Text(L10n.string("Lid-close actions"))
         } footer: {
-            Text("Apps on the list above are stopped with SIGSTOP while the lid is closed and resumed when it opens. With \"Freeze every other app\" on (off by default), every other Dock app is stopped too, except agent apps, Apple apps, Docker Desktop and built-in protected apps (editors, terminals, browsers, AI apps, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps such as Zoom, Teams, Webex, Wispr Flow, Granola, Otter, OBS and Loom). Agent apps are never frozen. The display brightness and keyboard backlight are saved, set to zero and restored when the lid opens. If Insomnia is not running when you open the lid, press the brightness-up key.")
+            Text(L10n.string("Apps on the list above are stopped with SIGSTOP while the lid is closed and resumed when it opens. With \"Freeze every other app\" on (off by default), every other Dock app is stopped too, except agent apps, Apple apps, Docker Desktop and built-in protected apps (editors, terminals, browsers, AI apps, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps such as Zoom, Teams, Webex, Wispr Flow, Granola, Otter, OBS and Loom). Agent apps are never frozen. The display brightness and keyboard backlight are saved, set to zero and restored when the lid opens. If Insomnia is not running when you open the lid, press the brightness-up key."))
         }
     }
 
@@ -218,20 +221,22 @@ struct SettingsView: View {
                 add: { id in update { if !$0.agentList.contains(id) { $0.agentList.append(id) } } },
                 remove: { id in update { $0.agentList.removeAll { $0 == id } } }
             )
-            Toggle("Turn App Nap off for these apps during a session", isOn: bind(\.disableAppNapForAgents))
-            Text("Writes NSAppSleepDisabled = YES into each listed app's preferences when a session starts and puts the previous value back when it ends.")
+            Toggle(L10n.string("Turn App Nap off for these apps during a session"), isOn: bind(\.disableAppNapForAgents))
+            Text(L10n.string("Writes NSAppSleepDisabled = YES into each listed app's preferences when a session starts and puts the previous value back when it ends."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         } header: {
-            Text("Agent apps")
+            Text(L10n.string("Agent apps"))
         } footer: {
-            Text("Agent apps are never frozen or throttled. Editors, AI apps, terminals, browsers, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps are also protected from the automatic lid-close scope even when they are not listed here; adding one to the freeze list above overrides that.")
+            Text(L10n.string("Agent apps are never frozen or throttled. Editors, AI apps, terminals, browsers, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps are also protected from the automatic lid-close scope even when they are not listed here; adding one to the freeze list above overrides that."))
         }
     }
 
     private var wouldFreezeText: String {
-        guard manager.config.freezeAllApps else { return "Would freeze now: the list above only" }
-        return wouldFreeze.isEmpty ? "Would freeze now: nothing else" : "Would freeze now: \(wouldFreeze.joined(separator: ", "))"
+        guard manager.config.freezeAllApps else { return L10n.string("Would freeze now: the list above only") }
+        return wouldFreeze.isEmpty
+            ? L10n.string("Would freeze now: nothing else")
+            : L10n.format("Would freeze now: %@", wouldFreeze.joined(separator: ", "))
     }
 
     /// Same planner as the lid-close action, over the apps running now.
@@ -241,60 +246,60 @@ struct SettingsView: View {
     }
 
     private var powerSection: some View {
-        Section("Battery and thermal") {
+        Section(L10n.string("Battery and thermal")) {
             Stepper(value: lowPowerFloor, in: 0...100, step: Config.floorStep) {
-                LabeledContent("Low Power Mode below", value: "\(manager.config.lowPowerFloor)%")
+                LabeledContent(L10n.string("Low Power Mode below"), value: "\(manager.config.lowPowerFloor)%")
             }
             Stepper(value: endFloor, in: 0...Config.maxEndFloor, step: Config.floorStep) {
-                LabeledContent("End session below", value: "\(manager.config.endFloor)%")
+                LabeledContent(L10n.string("End session below"), value: "\(manager.config.endFloor)%")
             }
-            Text("0 turns the battery end off. The end floor stays below the Low Power Mode floor. Moving one onto the other moves it along.")
+            Text(L10n.string("0 turns the battery end off. The end floor stays below the Low Power Mode floor. Moving one onto the other moves it along."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Toggle("Thermal rules (Low Power Mode when hot, end when critical)", isOn: bind(\.thermalRules))
+            Toggle(L10n.string("Thermal rules (Low Power Mode when hot, end when critical)"), isOn: bind(\.thermalRules))
         }
     }
 
     private var networkSection: some View {
         Section {
-            TextField("Hotspot SSID", text: bind(\.hotspotSSID))
+            TextField(L10n.string("Hotspot SSID"), text: bind(\.hotspotSSID))
             HStack {
-                SecureField("Hotspot password", text: Binding(get: { hotspot.password }, set: { hotspot.edit($0) }))
+                SecureField(L10n.string("Hotspot password"), text: Binding(get: { hotspot.password }, set: { hotspot.edit($0) }))
                     .onSubmit(savePassword)
-                Button(hotspot.buttonTitle(ssid: manager.config.hotspotSSID), action: savePassword)
+                Button(L10n.presentation(hotspot.buttonTitle(ssid: manager.config.hotspotSSID)), action: savePassword)
                     .disabled(hotspot.password.isEmpty || hotspot.saving)
             }
             if let notice = hotspot.notice {
-                Text(notice).font(.caption).foregroundStyle(.orange)
+                Text(L10n.presentation(notice)).font(.caption).foregroundStyle(.orange)
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text("Location: \(locationPermission.statusDescription)")
+                    Text(L10n.format("Location: %@", L10n.string(locationPermission.statusDescription)))
                         .foregroundStyle(.secondary)
                     Spacer()
                     if locationPermission.isDenied {
-                        Button("Open Location Services") {
+                        Button(L10n.string("Open Location Services")) {
                             locationPermission.openLocationServicesSettings()
                         }
                     }
                 }
                 // macOS has no when-in-use grant for Mac apps: the grant is
                 // recorded as Location Services access for Insomnia.
-                Text("macOS records this grant as Location Services access for Insomnia. Insomnia uses it only to read Wi-Fi network names and never requests your location.")
+                Text(L10n.string("macOS records this grant as Location Services access for Insomnia. Insomnia uses it only to read Wi-Fi network names and never requests your location."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Stepper(value: nudgeSeconds, in: 10...900, step: 10) {
-                LabeledContent("Nudge tmux after", value: "\(Int(manager.config.nudgeThreshold)) s offline")
+                LabeledContent(L10n.string("Nudge tmux after"), value: L10n.format("%d s offline", Int(manager.config.nudgeThreshold)))
             }
-            Text("After that long offline, Insomnia types \"continue\" into each pane listed below. Only a pane you have marked with this tmux command is nudged. Mark a dedicated pane, not one you type in.")
+            Text(L10n.string("After that long offline, Insomnia types \"continue\" into each pane listed below. Only a pane you have marked with this tmux command is nudged. Mark a dedicated pane, not one you type in."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(TmuxNudge.markCommand())
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
-            Toggle("Press Enter after continue", isOn: bind(\.tmuxNudgePressesEnter))
-            Text("Enter submits whatever is already typed in that pane, including a line that was never finished. When off, \"continue\" is typed and nothing submits it.")
+            Toggle(L10n.string("Press Enter after continue"), isOn: bind(\.tmuxNudgePressesEnter))
+            Text(L10n.string("Enter submits whatever is already typed in that pane, including a line that was never finished. When off, \"continue\" is typed and nothing submits it."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             ForEach(manager.config.tmuxTargets, id: \.self) { t in
@@ -307,16 +312,16 @@ struct SettingsView: View {
                 }
             }
             HStack {
-                TextField("tmux target (session:window.pane)", text: $newTmuxTarget)
+                TextField(L10n.string("tmux target (session:window.pane)"), text: $newTmuxTarget)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(addTmuxTarget)
-                Button("Add", action: addTmuxTarget)
+                Button(L10n.string("Add"), action: addTmuxTarget)
                     .disabled(newTmuxTarget.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         } header: {
-            Text("Network failover")
+            Text(L10n.string("Network failover"))
         } footer: {
-            Text("The password is kept in the login keychain, readable without a prompt only by the build of Insomnia that saved it; after a reinstall, enter it again. Location permission lets macOS reveal Wi-Fi network names and find the configured hotspot.")
+            Text(L10n.string("The password is kept in the login keychain, readable without a prompt only by the build of Insomnia that saved it; after a reinstall, enter it again. Location permission lets macOS reveal Wi-Fi network names and find the configured hotspot."))
         }
     }
 
@@ -484,24 +489,40 @@ struct SettingsView: View {
     }
 
     private var appSection: some View {
-        Section("App") {
-            Toggle("Launch at login", isOn: launchAtLogin)
+        Section(L10n.string("App")) {
+            LabeledContent(L10n.string("Language")) {
+                Picker(L10n.string("Language"), selection: Binding(
+                    get: { localization.language },
+                    set: { localization.language = $0 }
+                )) {
+                    Text("Русский").tag(AppLanguage.russian)
+                    Text("English").tag(AppLanguage.english)
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .accessibilityLabel(L10n.string("Language"))
+            }
+            Text(L10n.string("Insomnia selects its language from macOS settings each time it starts. Your choice here lasts until the app exits."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Toggle(L10n.string("Launch at login"), isOn: launchAtLogin)
             loginItemNote
-            LabeledContent("Config") {
+            LabeledContent(L10n.string("Config")) {
                 Text(manager.paths.configFile.path)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
-            LabeledContent("Version") {
-                Text(AppBuild.current.label)
+            LabeledContent(L10n.string("Version")) {
+                Text(L10n.presentation(AppBuild.current.label))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
             releaseCheck
             if LidSimulationBuild.isCompiledIn {
-                Text(LidSimulationBuild.marker)
+                Text(L10n.presentation(LidSimulationBuild.marker))
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
@@ -514,24 +535,24 @@ struct SettingsView: View {
     @ViewBuilder
     private var releaseCheck: some View {
         HStack {
-            Button(releases.state == .checking ? "Checking" : "Check for updates") { releases.check() }
+            Button(L10n.string(releases.state == .checking ? "Checking" : "Check for updates")) { releases.check() }
                 .disabled(releases.state == .checking)
-            Button("Open releases page") { NSWorkspace.shared.open(GitHubReleaseFetcher.releasesPage) }
+            Button(L10n.string("Open releases page")) { NSWorkspace.shared.open(GitHubReleaseFetcher.releasesPage) }
         }
         switch releases.state {
         case .idle:
-            Text("Asks GitHub when you click, and installs nothing. To upgrade, run the installer again.")
+            Text(L10n.string("Asks GitHub when you click, and installs nothing. To upgrade, run the installer again."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         case .checking:
             EmptyView()
         case let .checked(report):
-            Text(report.summary)
+            Text(L10n.presentation(report.summary))
                 .font(.caption)
                 .foregroundStyle(report.standing == .newerStableAvailable ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                 .textSelection(.enabled)
         case let .failed(reason):
-            Text("Could not check: \(reason)")
+            Text(L10n.format("Could not check: %@", L10n.presentation(reason)))
                 .font(.caption)
                 .foregroundStyle(.red)
         }
@@ -558,17 +579,17 @@ struct SettingsView: View {
     @ViewBuilder
     private var loginItemNote: some View {
         if let error = loginItem.error {
-            Text("Login item: \(error)").font(.caption).foregroundStyle(.red)
+            Text(L10n.format("Login item: %@", L10n.presentation(error))).font(.caption).foregroundStyle(.red)
         } else if loginItem.needsApproval {
             HStack {
-                Text("Waiting for approval in System Settings > General > Login Items. Turn the switch off to withdraw it.")
+                Text(L10n.string("Waiting for approval in System Settings > General > Login Items. Turn the switch off to withdraw it."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Open Login Items") { loginItem.openLoginItems() }
+                Button(L10n.string("Open Login Items")) { loginItem.openLoginItems() }
             }
         } else if manager.config.launchAtLogin, !loginItem.isRegistered {
-            Text("Login item: macOS reports it \(loginItem.status.description). Turn the switch on to register it again.")
+            Text(L10n.format("Login item: macOS reports it %@. Turn the switch on to register it again.", L10n.presentation(loginItem.status.description)))
                 .font(.caption)
                 .foregroundStyle(.orange)
         }
@@ -584,7 +605,7 @@ struct SettingsView: View {
         remove: @escaping (String) -> Void
     ) -> some View {
         Group {
-            Text(title).font(.headline)
+            Text(L10n.string(title)).font(.headline)
             ForEach(items, id: \.self) { id in
                 HStack {
                     VStack(alignment: .leading, spacing: 1) {
@@ -596,7 +617,7 @@ struct SettingsView: View {
                 }
             }
             HStack {
-                TextField("Bundle identifier", text: newValue)
+                TextField(L10n.string("Bundle identifier"), text: newValue)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
                         let v = newValue.wrappedValue.trimmingCharacters(in: .whitespaces)
@@ -604,17 +625,17 @@ struct SettingsView: View {
                         add(v)
                         newValue.wrappedValue = ""
                     }
-                Button("Add") {
+                Button(L10n.string("Add")) {
                     let v = newValue.wrappedValue.trimmingCharacters(in: .whitespaces)
                     guard !v.isEmpty else { return }
                     add(v)
                     newValue.wrappedValue = ""
                 }
                 .disabled(newValue.wrappedValue.trimmingCharacters(in: .whitespaces).isEmpty)
-                Menu("Add running app…") {
+                Menu(L10n.string("Add running app…")) {
                     let apps = RunningApps.candidates(excluding: items)
                     if apps.isEmpty {
-                        Text("No other apps running")
+                        Text(L10n.string("No other apps running"))
                     }
                     ForEach(apps, id: \.bundleID) { app in
                         Button(app.name) { add(app.bundleID) }
@@ -631,7 +652,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
-        .help("Remove")
+        .help(L10n.string("Remove"))
     }
 }
 

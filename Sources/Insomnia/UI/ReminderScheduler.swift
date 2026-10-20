@@ -52,14 +52,16 @@ final class ReminderScheduler {
     private func fire(endsAt: Date) {
         scheduledFor = nil
         timer = nil
-        let body = "Sleep is restored at \(endsAt.formatted(date: .omitted, time: .shortened)). Extend from the menu bar."
+        let language = LocalizationManager.shared.language
+        let formattedTime = Date.FormatStyle(date: .omitted, time: .shortened, locale: language.locale).format(endsAt)
+        let body = L10n.format("Sleep is restored at %@. Extend from the menu bar.", language: language, formattedTime)
         Log.info("reminder: 5 minutes left")
         guard Self.canNotify else {
             Log.info("reminder not posted: not running from an app bundle")
             return
         }
         let content = UNMutableNotificationContent()
-        content.title = "5 minutes left"
+        content.title = L10n.string("5 minutes left", language: language)
         content.body = body
         content.sound = .default
         let request = UNNotificationRequest(identifier: "insomnia.reminder", content: content, trigger: nil)

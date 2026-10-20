@@ -46,6 +46,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        let preferences = LocalizationManager.macOSPreferences()
+        LocalizationManager.shared.resolveAtLaunch(
+            appSpecific: preferences.appSpecific,
+            system: Locale.preferredLocales.map(\.identifier) + preferences.system
+        )
         // Before launch finishes, so the first notification already shows
         // while Insomnia is frontmost.
         ForegroundNotifications.install()

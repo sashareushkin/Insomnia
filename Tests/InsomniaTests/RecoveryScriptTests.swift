@@ -4849,6 +4849,10 @@ final class RecoveryScriptTests: XCTestCase {
         XCTAssertFalse(calls.contains { $0.hasPrefix("codesign --verify --strict --deep") }, "the prebuilt checks are for --app only: \(calls)")
         XCTAssertTrue(fx.exists(fx.app.appendingPathComponent("Contents/MacOS/Insomnia")))
         XCTAssertTrue(fx.exists(fx.installedBackstop))
+        for language in ["en", "ru"] {
+            XCTAssertTrue(fx.exists(fx.app.appendingPathComponent("Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/\(language).lproj/Localizable.strings")), "SwiftPM \(language) localization bundle")
+            XCTAssertTrue(fx.exists(fx.app.appendingPathComponent("Contents/Resources/\(language).lproj/InfoPlist.strings")), "Info.plist \(language) localization")
+        }
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fx.appsDir.path), ["Insomnia.app"])
     }
 
@@ -6423,10 +6427,29 @@ private final class ScriptFixture {
         <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.kgarg.insomnia</string></dict></plist>
         """.write(to: resources.appendingPathComponent("Info.plist"), atomically: true, encoding: .utf8)
         try "icns".write(to: resources.appendingPathComponent("AppIcon.icns"), atomically: true, encoding: .utf8)
+        for language in ["en", "ru"] {
+            let infoLocalization = resources.appendingPathComponent("\(language).lproj", isDirectory: true)
+            try fm.createDirectory(at: infoLocalization, withIntermediateDirectories: true)
+            try "\"NSLocationUsageDescription\" = \"fixture\";\n".write(
+                to: infoLocalization.appendingPathComponent("InfoPlist.strings"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
         let binroot = root.appendingPathComponent("binroot", isDirectory: true)
         try fm.createDirectory(at: binroot, withIntermediateDirectories: true)
         let binary = binroot.appendingPathComponent("Insomnia")
         try TestScripts.write("#!/bin/bash\nexit 0\n", to: binary)
+        let resourceBundle = binroot.appendingPathComponent("Insomnia_Insomnia.bundle", isDirectory: true)
+        for language in ["en", "ru"] {
+            let localization = resourceBundle.appendingPathComponent("Contents/Resources/\(language).lproj", isDirectory: true)
+            try fm.createDirectory(at: localization, withIntermediateDirectories: true)
+            try "\"Fixture\" = \"\(language)\";\n".write(
+                to: localization.appendingPathComponent("Localizable.strings"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
         try fm.createDirectory(at: plist.deletingLastPathComponent(), withIntermediateDirectories: true)
     }
 

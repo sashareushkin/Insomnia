@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Insomnia",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v26),
     ],
@@ -10,6 +11,9 @@ let package = Package(
         .executableTarget(
             name: "Insomnia",
             path: "Sources/Insomnia",
+            resources: [
+                .process("Resources"),
+            ],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
             ]

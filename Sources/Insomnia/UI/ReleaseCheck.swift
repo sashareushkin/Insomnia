@@ -189,17 +189,17 @@ struct ReleaseReport: Equatable, Sendable {
         let stable = newestStable.map { "\($0)" }
         let first: String = switch standing {
         case .newerStableAvailable:
-            "A newer stable release exists: \(stable ?? ""). You have \(installed.version ?? "")."
+            L10n.format("A newer stable release exists: %@. You have %@.", stable ?? "", installed.version ?? "")
         case .upToDate:
-            "You have the newest stable release, \(stable ?? "")."
+            L10n.format("You have the newest stable release, %@.", stable ?? "")
         case .aheadOfStable:
-            "You have \(installed.version ?? ""), higher than the release marked Latest, \(stable ?? "")."
+            L10n.format("You have %@, higher than the release marked Latest, %@.", installed.version ?? "", stable ?? "")
         case .noStableRelease:
-            "No stable release is published yet."
+            L10n.string("No stable release is published yet.")
         case .installedVersionUnknown:
-            "This build has no version to compare. The newest stable release is \(stable ?? "none")."
+            L10n.format("This build has no version to compare. The newest stable release is %@.", stable ?? "none")
         }
-        let second = newestNightly.map { "Newest nightly: \($0)." } ?? "No nightly is published."
+        let second = newestNightly.map { L10n.format("Newest nightly: %@.", $0) } ?? L10n.string("No nightly is published.")
         return first + " " + second
     }
 
