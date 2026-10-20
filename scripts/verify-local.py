@@ -53,6 +53,7 @@ def run_step(
     log_path: Path,
     env: dict[str, str] | None = None,
     runner: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
+    stream_output: bool = True,
 ) -> dict[str, Any]:
     """Run and stream one command, preserving its exit code and full output."""
     started = time.monotonic()
@@ -76,8 +77,9 @@ def run_step(
             output.append(line)
             log.write(line)
             log.flush()
-            sys.stdout.write(line)
-            sys.stdout.flush()
+            if stream_output:
+                sys.stdout.write(line)
+                sys.stdout.flush()
         return_code = process.wait()
     result = {
         "label": label,
@@ -267,7 +269,7 @@ def markdown_report(report: dict[str, Any]) -> str:
         "",
         "## Checks",
         "",
-        "| Check | Result | Duration | Log |",
+        "| Check | Result | Duration | Log | Reason |",
         "| --- | --- | ---: | --- | --- |",
     ]
     for step in report["steps"]:
@@ -382,6 +384,7 @@ def main(argv: list[str] | None = None) -> int:
         cwd: Path,
         env: dict[str, str] | None = None,
         check: bool = True,
+        stream_output: bool = True,
     ) -> dict[str, Any]:
         filename = re.sub(r"[^A-Za-z0-9._-]+", "-", label).strip("-") or "step"
         result = run_step(
@@ -390,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
             cwd,
             logs / f"{len(report['steps']) + 1:02d}-{filename}.log",
             env=env,
+            stream_output=stream_output,
         )
         report["steps"].append({key: value for key, value in result.items() if key != "output"})
         if check and result["exit_code"] != 0:
@@ -515,7 +519,7 @@ def main(argv: list[str] | None = None) -> int:
         report["package"] = verify_package(worktree, app, bin_path)
         step("Verify temporary app signature", ["/usr/bin/codesign", "--verify", "--strict", str(app)], worktree)
 
-        inventory_result = step("List Swift tests", ["swift", "test", "list"], worktree)
+        inventory_result = step("List Swift tests", ["swift", "test", "list"], worktree, stream_output=False)
         inventory = parse_test_inventory(inventory_result["output"])
         if not inventory:
             raise VerificationError("swift test list returned no Insomnia XCTest cases")
@@ -527,11 +531,15 @@ def main(argv: list[str] | None = None) -> int:
             excluded = []
             excluded_suites = []
             test_command = ["swift", "test"]
+        expected_count = len(inventory) - len(excluded)
+        print(
+            f"Swift test inventory: {len(inventory)} test cases; "
+            f"{len(excluded)} excluded by mode; {expected_count} selected."
+        )
         test_result = step(
             "Run Swift tests", test_command, worktree, {"NSUnbufferedIO": "YES"}, check=False
         )
         summary = parse_swift_test_summary(test_result["output"])
-        expected_count = len(inventory) - len(excluded)
         summary.update(
             {
                 "listed": len(inventory),

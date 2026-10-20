@@ -97,6 +97,23 @@ class VerifyLocalTests(unittest.TestCase):
             self.assertEqual(result["status"], "fail")
             self.assertEqual(log.read_text(encoding="utf-8"), "failure detail\n")
 
+    def test_run_step_can_keep_inventory_output_in_the_log_without_flooding_stdout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "inventory.log"
+            displayed = io.StringIO()
+            with contextlib.redirect_stdout(displayed):
+                result = verify.run_step(
+                    "quiet inventory",
+                    ["fake"],
+                    Path(directory),
+                    log,
+                    runner=lambda *args, **kwargs: FakeProcess("InsomniaTests.One/testOne\n"),
+                    stream_output=False,
+                )
+            self.assertEqual(displayed.getvalue(), "")
+            self.assertEqual(result["output"], "InsomniaTests.One/testOne\n")
+            self.assertEqual(log.read_text(encoding="utf-8"), result["output"])
+
     def test_package_check_covers_identity_and_localized_resource_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
