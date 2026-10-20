@@ -80,7 +80,7 @@ struct StatusRootView: View {
             } else if showsCountdown {
                 countdown
                 if showsRunningControls {
-                    HoldToEndButton(reduceMotion: reduceMotion, action: onHoldEnd)
+                    HoldToEndButton(reduceMotion: reduceMotion, action: onHoldEnd, state: model.endHold)
                         .transition(Motion.ringTransition(reduceMotion: reduceMotion))
                 }
             }
@@ -183,8 +183,17 @@ struct StatusRootView: View {
     /// sleep first, and either can take seconds. The projection is what the
     /// session will read once confirmed, so the live text replaces it
     /// without a jump; the hold-to-end ring waits for the confirmation.
+    @ViewBuilder
     private var countdown: some View {
-        Text(countdownText)
+        if showsRunningControls, model.pendingCountdown == nil {
+            VisibleSessionCountdown(read: { manager.presentationCountdownText() }) { text in countdownLabel(text) }
+        } else {
+            countdownLabel(countdownText)
+        }
+    }
+
+    private func countdownLabel(_ text: String) -> some View {
+        Text(text)
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .monospacedDigit()
             // No content transition and no animation: a per-frame one is a
@@ -195,7 +204,7 @@ struct StatusRootView: View {
             .transition(Motion.countdownTransition(reduceMotion: reduceMotion))
             .contentShape(Rectangle())
             .onTapGesture(perform: onTapCountdown)
-            .accessibilityLabel(model.phase == .starting ? "Starting session" : countdownText)
+            .accessibilityLabel(model.phase == .starting ? "Starting session" : text)
     }
 
     /// The manager refused the start: say so next to the pills the value is
@@ -209,5 +218,30 @@ struct StatusRootView: View {
             .fixedSize()
             .transition(Motion.errorTransition(reduceMotion: reduceMotion))
             .accessibilityLabel("Start failed")
+    }
+}
+
+/// The manager pauses its redraw timer with a closed lid to save battery.
+/// A visible external display still needs a live label. This presentation-only
+/// clock never changes the deadline or the recovery/session lifecycle.
+private struct VisibleSessionCountdown<Content: View>: View {
+    let read: () -> String
+    @ViewBuilder let content: (String) -> Content
+    @State private var screensAwake = true
+
+    var body: some View {
+        Group {
+            if screensAwake {
+                TimelineView(.periodic(from: .now, by: 1)) { _ in content(read()) }
+            } else {
+                content(read())
+            }
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidSleepNotification)) { _ in
+            screensAwake = false
+        }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.screensDidWakeNotification)) { _ in
+            screensAwake = true
+        }
     }
 }

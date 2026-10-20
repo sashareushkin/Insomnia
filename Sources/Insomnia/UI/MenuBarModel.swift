@@ -9,6 +9,7 @@ import Observation
 @MainActor
 @Observable
 final class MenuBarModel {
+    let endHold = EndHoldState()
     enum Mode: Equatable, Sendable {
         /// Enter starts a new session.
         case start

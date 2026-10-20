@@ -34,6 +34,7 @@ final class StatusItemController: NSObject {
 
     private let statusItem: NSStatusItem
     private var hostingView: StatusHostingView?
+    private var holdMouseRouter: StatusHoldMouseRouter?
     private var widthWriter: StatusWidthWriter?
 
     private var keyMonitor: Any?
@@ -128,6 +129,7 @@ final class StatusItemController: NSObject {
         // SwiftUI handles the clicks; the cell must not paint a highlight.
         (button.cell as? NSButtonCell)?.highlightsBy = []
         hostingView = host
+        holdMouseRouter = StatusHoldMouseRouter(host: host)
         // The layout may already have reported through `onGeometryChange`
         // while the host was measured above, before `hostingView` was set,
         // in which case `retargetWidth` treats the fitting width as a
@@ -226,6 +228,7 @@ final class StatusItemController: NSObject {
     }
 
     private func managerChanged() {
+        if !manager.isActive { model.endHold.cancel() }
         reminder.sync(endsAt: manager.session?.endsAt)
         if let next = Self.phase(forActive: manager.isActive, phase: model.phase) {
             switch next {
@@ -611,8 +614,13 @@ final class StatusItemController: NSObject {
 
     // MARK: Session actions
 
+    private var endRequested = false
+
     private func endNow() {
+        guard manager.isActive, !endRequested else { return }
+        endRequested = true
         Task { @MainActor in
+            defer { endRequested = false }
             await manager.end(reason: .user)
         }
     }
@@ -651,6 +659,7 @@ final class StatusItemController: NSObject {
         let menu = StatusMenu.menu(
             Self.menuItems(manager: manager, status: status),
             target: self,
+            endSession: #selector(menuEndSession),
             settings: #selector(menuOpenSettings),
             quit: #selector(menuQuit),
             relaunchBrowser: #selector(menuRelaunchBrowser(_:)),
@@ -725,6 +734,8 @@ final class StatusItemController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
         return alert.runModal() == .alertFirstButtonReturn
     }
+
+    @objc private func menuEndSession() { holdToEnd() }
 
     @objc private func menuQuit() {
         NSApplication.shared.terminate(nil)

@@ -2876,6 +2876,14 @@ final class SessionManager {
         armCountdownTimer()
     }
 
+    /// Read-only label for visible UI, including an external display while
+    /// the lid is closed. Uses the same injected clock as the deadline;
+    /// does not resume timers or change any session/recovery state.
+    func presentationCountdownText() -> String {
+        guard let session else { return "" }
+        return SessionMath.formatCountdown(remaining: session.remaining(at: clock()), shape: session.countdownShape)
+    }
+
     /// Recompute `remainingText` and `countdownText` from the injected clock.
     /// Each is only assigned when it changes, so observers are not woken every
     /// second for the minute-granularity text.
