@@ -7176,6 +7176,15 @@ private final class ScriptFixture {
         try? value.write(to: root.appendingPathComponent("\(name).mode"), atomically: true, encoding: .utf8)
     }
 
+    /// Gives ordinary recovery fixture cases five seconds for fake children
+    /// to start and finish under full-suite load. Timeout-specific tests and
+    /// the production backstop's 30-second limit remain unchanged.
+    func setBackstopCommandTimeout(_ seconds: Int) throws {
+        let source = try String(contentsOf: backstop, encoding: .utf8)
+        try Self.patch(source, ["COMMAND_TIMEOUT_SECONDS": String(seconds)])
+            .write(to: backstop, atomically: true, encoding: .utf8)
+    }
+
     /// Which message the fake `defaults` prints for an absent key (see its
     /// comment): "27-key", "27-domain", or "26" (the default) for macOS
     /// 26's. Any other wording makes the fake fail, so a typo cannot pass
@@ -8099,6 +8108,7 @@ final class AppEncodedJournalScriptTests: XCTestCase {
                         let label = "\(v.label) record \(record) legacy \(legacy) purge \(purge)"
                         let f = try ScriptFixture()
                         defer { f.destroy() }
+                        try f.setBackstopCommandTimeout(5)
                         let before = try await appJournal(uid: v.uid, name: v.name, record: record, legacy: legacy, boot: f.bootUUID)
                         try f.installMachinery()
                         try before.write(to: f.state)
@@ -8143,6 +8153,7 @@ final class AppEncodedJournalScriptTests: XCTestCase {
             XCTAssertNoThrow(try Store.makeDecoder().decode(RuntimeState.self, from: Data(json.utf8)), label)
             let f = try ScriptFixture()
             defer { f.destroy() }
+            try f.setBackstopCommandTimeout(5)
             try f.writeState(json)
             try f.writeSession(endsAt: Date(timeIntervalSinceNow: -60))
 
