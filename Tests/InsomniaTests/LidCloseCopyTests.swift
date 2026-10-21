@@ -20,12 +20,9 @@ final class LidCloseCopyTests: XCTestCase {
         text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
-    /// The body of `SettingsView.lidSection`.
+    /// The dedicated lid-close destination view.
     private func lidSection() throws -> String {
-        let source = try read("Sources/Insomnia/UI/SettingsView.swift")
-        let start = try XCTUnwrap(source.range(of: "private var lidSection: some View {")).upperBound
-        let end = try XCTUnwrap(source.range(of: "private var agentSection: some View {")).lowerBound
-        return String(source[start..<end])
+        try read("Sources/Insomnia/UI/LidCloseSettingsView.swift")
     }
 
     func testMicrophoneNoteSaysTheMicIsDisconnectedAndWhatToUseInstead() {
@@ -38,9 +35,9 @@ final class LidCloseCopyTests: XCTestCase {
     /// lid-close options.
     func testSettingsShowsTheMicrophoneNoteUnderTheMuteToggle() throws {
         let lid = try lidSection()
-        let toggle = try XCTUnwrap(lid.range(of: #"Toggle(L10n.string("Mute audio on lid close"), isOn: bind(\.muteOnLidClose))"#))
-        let next = lid[toggle.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
-        XCTAssertTrue(next.hasPrefix("Text(L10n.string(Self.microphoneNote))"), String(next.prefix(80)))
+        let toggle = try XCTUnwrap(lid.range(of: #"L10n.string("Mute audio on lid close")"#))
+        let note = try XCTUnwrap(lid.range(of: "Text(L10n.string(SettingsView.microphoneNote))"))
+        XCTAssertLessThan(toggle.lowerBound, note.lowerBound)
     }
 
     func testReadmeExplainsTheMicrophone() throws {
@@ -55,5 +52,10 @@ final class LidCloseCopyTests: XCTestCase {
         XCTAssertTrue(lid.contains("if let notice = manager.config.lidCloseDefaultsNotice"))
         XCTAssertTrue(lid.contains("Text(L10n.presentation(notice.settingsLine))"))
         XCTAssertTrue(lid.contains(#"Button(L10n.string("Dismiss")) { manager.dismissLidCloseNotice() }"#))
+    }
+
+    func testSettingsRetainsTheImmediateLowPowerFloorReevaluation() throws {
+        let lid = try lidSection()
+        XCTAssertTrue(lid.contains("manager.services?.reevaluateFloors()"))
     }
 }
