@@ -30,22 +30,34 @@ struct SettingsView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 ForEach(SettingsSection.allCases) { section in
-                    Label(
-                        L10n.string(section.titleKey, language: language),
-                        systemImage: section.symbol
-                    )
+                    Label {
+                        Text(L10n.string(section.titleKey, language: language))
+                    } icon: {
+                        Image(systemName: section.symbol)
+                            .font(.system(size: SettingsLayout.sidebarSymbolSize))
+                            .frame(width: 20)
+                    }
                     .tag(section)
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 280)
+            .scrollContentBackground(.hidden)
+            .background(.regularMaterial, ignoresSafeAreaEdges: .top)
+            .navigationSplitViewColumnWidth(
+                min: SettingsLayout.sidebarColumnWidth,
+                ideal: SettingsLayout.sidebarColumnWidth,
+                max: SettingsLayout.sidebarColumnWidth
+            )
         } detail: {
             destination(for: selection)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .navigationTitle(L10n.string(selection.titleKey, language: language))
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 760, minHeight: 560)
+        .frame(
+            minWidth: SettingsLayout.windowContentSize.width,
+            minHeight: SettingsLayout.windowContentSize.height
+        )
         .environment(\.locale, language.locale)
         .onAppear {
             loadPassword()

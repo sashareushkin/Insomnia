@@ -45,17 +45,20 @@ final class SettingsWindow {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private func make() -> NSWindow {
+    func make() -> NSWindow {
         let language = LocalizationManager.shared.language
         let host = NSHostingController(rootView: content().environment(\.locale, language.locale))
         let window = NSWindow(contentViewController: host)
         window.title = L10n.string("Insomnia Settings", language: language)
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .visible
         // Closing settings must not deallocate the window: the status item
         // keeps a reference and reopens the same one.
         window.isReleasedWhenClosed = false
-        window.contentMinSize = NSSize(width: 760, height: 560)
-        window.setContentSize(NSSize(width: 900, height: 680))
+        let size = SettingsLayout.windowContentSize
+        window.contentMinSize = NSSize(width: size.width, height: size.height)
+        window.setContentSize(NSSize(width: size.width, height: size.height))
         window.isRestorable = false
         return window
     }
