@@ -13,24 +13,9 @@ import SwiftUI
 final class SettingsWindow {
     private var window: NSWindow?
     private let content: () -> AnyView
-    private var languageObserver: NSObjectProtocol?
 
     init(content: @escaping () -> AnyView) {
         self.content = content
-        languageObserver = NotificationCenter.default.addObserver(
-            forName: LocalizationManager.languageDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.window?.title = L10n.string("Insomnia Settings")
-            }
-        }
-    }
-
-    isolated deinit {
-        if let languageObserver { NotificationCenter.default.removeObserver(languageObserver) }
     }
 
     /// Bring the window up, creating it the first time. An accessory app has
@@ -49,17 +34,19 @@ final class SettingsWindow {
         let language = LocalizationManager.shared.language
         let host = NSHostingController(rootView: content().environment(\.locale, language.locale))
         let window = NSWindow(contentViewController: host)
-        window.title = L10n.string("Insomnia Settings", language: language)
+        window.title = L10n.string(SettingsSection.general.titleKey, language: language)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.toolbarStyle = .unified
+        window.titlebarAppearsTransparent = false
+        window.toolbar = NSToolbar(identifier: "SettingsToolbar")
+        window.toolbarStyle = .unifiedCompact
+        window.toolbar?.sizeMode = .small
         // Closing settings must not deallocate the window: the status item
         // keeps a reference and reopens the same one.
         window.isReleasedWhenClosed = false
-        let size = SettingsLayout.windowContentSize
-        window.contentMinSize = NSSize(width: size.width, height: size.height)
-        window.setContentSize(NSSize(width: size.width, height: size.height))
+        let frameSize = NSSize(width: SettingsLayout.windowFrameSize.width, height: SettingsLayout.windowFrameSize.height)
+        let targetFrame = NSRect(origin: .zero, size: frameSize)
+        window.contentMinSize = window.contentRect(forFrameRect: targetFrame).size
+        window.setFrame(NSRect(origin: window.frame.origin, size: frameSize), display: false)
         window.isRestorable = false
         return window
     }

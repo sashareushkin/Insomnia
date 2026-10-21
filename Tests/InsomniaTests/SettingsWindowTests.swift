@@ -5,21 +5,25 @@ import XCTest
 
 @MainActor
 final class SettingsWindowTests: XCTestCase {
-    func testWindowUsesRequestedSizeAndTransparentTitlebar() {
+    func testWindowUsesRequestedSizeAndMaterialToolbar() {
         let settings = SettingsWindow { AnyView(EmptyView()) }
         let window = settings.make()
-        let expectedSize = NSSize(width: 800, height: 480)
+        let expectedFrameSize = NSSize(width: 800, height: 480)
+        let expectedContentSize = window.contentRect(
+            forFrameRect: NSRect(origin: .zero, size: expectedFrameSize)
+        ).size
 
-        XCTAssertEqual(window.contentMinSize, expectedSize)
-        XCTAssertEqual(window.contentRect(forFrameRect: window.frame).size, expectedSize)
+        XCTAssertEqual(window.frame.size, expectedFrameSize)
+        XCTAssertEqual(window.contentMinSize, expectedContentSize)
         XCTAssertTrue(window.styleMask.contains(.fullSizeContentView))
-        XCTAssertTrue(window.titlebarAppearsTransparent)
-        XCTAssertEqual(window.titleVisibility, .hidden)
-        XCTAssertEqual(window.toolbarStyle, .unified)
+        XCTAssertFalse(window.titlebarAppearsTransparent)
+        XCTAssertEqual(window.title, L10n.string(SettingsSection.general.titleKey))
+        XCTAssertEqual(window.toolbarStyle, .unifiedCompact)
+        XCTAssertNotNil(window.toolbar)
     }
 
     func testSidebarUsesRequestedWidthAndSmallerSymbols() {
-        XCTAssertEqual(SettingsLayout.sidebarColumnWidth, 280)
+        XCTAssertEqual(SettingsLayout.sidebarColumnWidth, 208)
         XCTAssertEqual(SettingsLayout.sidebarSymbolSize, 10)
     }
 }
