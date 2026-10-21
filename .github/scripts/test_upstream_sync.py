@@ -59,11 +59,14 @@ class SyncTests(unittest.TestCase):
         self.assertIsNone(sync.synchronize('owner/fork', fake))
         self.assertEqual(fake.writes, [])
 
-    def test_fast_forward_create_and_dispatch(self):
+    def test_fast_forward_create_without_hosted_test_dispatch(self):
         fake = FakeAPI()
         self.assertEqual(sync.synchronize('owner/fork', fake), 7)
-        self.assertEqual([m for _, m, _ in fake.writes], ['PATCH', 'POST', 'POST'])
-        self.assertEqual(fake.writes[-1][2]['inputs'], {'pr': '7'})
+        self.assertEqual([m for _, m, _ in fake.writes], ['PATCH', 'POST'])
+        self.assertFalse(any('/actions/' in path for path, _, _ in fake.writes))
+        pull_request = next(fields for path, _, fields in fake.writes if path.endswith('/pulls'))
+        self.assertIn('scripts/verify-local.sh safe --candidate origin/main --base origin/custom', pull_request['body'])
+        self.assertIn('does not create a GitHub status check', pull_request['body'])
 
     def test_retry_does_not_duplicate_pr(self):
         fake = FakeAPI()
@@ -81,8 +84,7 @@ class SyncTests(unittest.TestCase):
     def test_existing_conflicting_pr_is_kept_open(self):
         fake = FakeAPI(mirror='new', existing=True, conflict=True)
         self.assertEqual(sync.synchronize('owner/fork', fake), 7)
-        self.assertEqual(len(fake.writes), 1)
-        self.assertIn('/dispatches', fake.writes[0][0])
+        self.assertEqual(fake.writes, [])
 
     def test_multiple_existing_prs_fail_closed(self):
         fake = FakeAPI(mirror='new', existing=True)

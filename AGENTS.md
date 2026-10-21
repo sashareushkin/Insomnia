@@ -19,11 +19,20 @@ Insomnia controls sleep, power settings, process suspension and restoration.
 - Preserve the recovery journal and recovery backstop. Never disable or simplify either to pass tests, or bypass safety checks.
 - A session must not finish without its prescribed system-state restoration. Any session lifecycle change requires separate review.
 - Real tests involving lid closure, power changes or stopping processes require explicit owner permission.
-- Use injected dependencies and temporary test journals. On the owner's working Mac, skip `UIStatusTests`, `UIStartupTests` and `KeychainStoreTests` as upstream documents; run the full suite on a disposable hosted CI runner. Report skips honestly.
+- Use injected dependencies and temporary test journals. On the owner's working Mac, run `scripts/verify-local.sh safe`; it skips `UIStatusTests`, `UIStartupTests` and `KeychainStoreTests`, checks that this pattern excludes exactly those suites, and reports every test skip or failure.
+- Run the full test suite only with `INSOMNIA_ISOLATED_MACOS26=1 scripts/verify-local.sh full-isolated` on a disposable macOS 26 VM or dedicated test Mac. Never set this acknowledgment on the owner's daily-use Mac.
+- Keep verification reports, logs, build products and the temporary `.app` outside the checkout. Report the candidate SHA, `origin/custom` base SHA, tested merge-tree SHA, commands, skips and failures. A local report is not a GitHub status check.
 
 ## Completion
-1. Run available, appropriate tests; inspect `git diff` and whitespace errors.
+1. Run `scripts/verify-local.sh safe` on the exact candidate, inspect its report and `git diff`/whitespace errors.
 2. Make meaningful scoped commits, push the task branch to `origin`, and create a PR into `custom` with `gh ... -R sashareushkin/Insomnia`.
 3. Update `docs/fork-changes.md` with date, feature, reason, subsystems and PR link.
 4. Report changes, passed tests, skipped/remaining checks and blockers. Build/test failures mean the task is incomplete; fix them or report the blocker.
 5. Never merge a PR without explicit owner permission. Never release or alter system settings as an implied completion step.
+
+## Local verification gate
+
+- Pull requests must include the local verification summary from `.github/pull_request_template.md` and link the generated report.
+- Upstream integration candidates must be checked as the merge of `origin/main` into the latest `origin/custom`, using `scripts/verify-local.sh safe --candidate origin/main --base origin/custom`.
+- Do not post synthetic GitHub statuses or claim GitHub Actions passed based on a local report.
+- The `custom` branch's previous required `Swift build and test` check was removed before merging the local verification infrastructure. Keep pull-request, conversation-resolution, no-force-push and no-deletion protections; review the branch protection settings before any future policy change.
