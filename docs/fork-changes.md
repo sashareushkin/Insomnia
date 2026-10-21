@@ -1,7 +1,6 @@
 # Changes relative to upstream
 
-Keep one entry per scoped change, including its PR. No application behavior has
-been changed by the infrastructure bootstrap.
+Keep one entry per scoped change, including its PR.
 
 | Date | Feature | Reason | Subsystems | PR |
 | --- | --- | --- | --- | --- |
@@ -11,3 +10,4 @@ been changed by the infrastructure bootstrap.
 | 2026-10-20 | Local verification gate | Replace hosted fork CI dispatch with reproducible, merge-candidate local evidence and explicitly guarded isolated full verification | Verification scripts/reports, upstream sync, GitHub workflow, branch policy docs and PR template | [PR #9](https://github.com/sashareushkin/Insomnia/pull/9) |
 | 2026-10-20 | Stabilize recovery script fixture deadlines | Prevent host scheduling delays from turning the one-second fake-command timeout into false recovery failures while preserving timeout assertions | RecoveryScriptTests ScriptFixture, escaped-journal uninstall and app-record recovery cases | [PR #10](https://github.com/sashareushkin/Insomnia/pull/10) |
 | 2026-10-20 | Russian and English localization | Resolve the app language from macOS preferences and allow an immediate transient language switch without changing configuration or recovery state | SwiftPM localization resources, settings and status UI, alerts and notifications, app bundle packaging, localization CI and tests | [PR #5](https://github.com/sashareushkin/Insomnia/pull/5) |
+| 2026-10-21 | Native Settings sidebar | Move all existing settings into seven localized, resizable sidebar destinations while preserving persistence and runtime behavior | SwiftUI Settings navigation and grouped forms, AppKit window sizing, English/Russian localization, regression tests | [PR #12](https://github.com/sashareushkin/Insomnia/pull/12) |
