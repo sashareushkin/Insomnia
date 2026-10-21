@@ -31,11 +31,13 @@ private actor FakeReleases: ReleaseFetching {
 /// The version line and the update check, without a window and without a
 /// network: the fetcher is a fake, and the report is a pure function of
 /// the installed version and GitHub's two answers.
+@MainActor
 final class ReleaseCheckTests: XCTestCase {
     private var home: TempHome!
 
     override func setUp() {
         super.setUp()
+        _ = LocalizationManager(language: .english)
         home = TempHome()
     }
 

@@ -6,6 +6,11 @@ import XCTest
 /// these are kept apart so they can run anywhere.
 @MainActor
 final class StatusMenuWarningTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        _ = LocalizationManager(language: .english)
+    }
+
     /// A restore that failed and a SleepDisabled bit someone else set can
     /// come out of the same reconcile. Each gets its own warning line, the
     /// error first.

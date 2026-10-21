@@ -321,8 +321,22 @@ final class PackagingTests: XCTestCase {
         for name in ["Info.plist", "AppIcon.icns"] {
             try fm.copyItem(at: Self.repoRoot.appendingPathComponent("Resources/\(name)"), to: checkout.appendingPathComponent("Resources/\(name)"))
         }
+        for language in ["en", "ru"] {
+            try fm.copyItem(
+                at: Self.repoRoot.appendingPathComponent("Resources/\(language).lproj"),
+                to: checkout.appendingPathComponent("Resources/\(language).lproj")
+            )
+        }
         try fm.copyItem(at: Self.repoRoot.appendingPathComponent("scripts/backstop.sh"), to: checkout.appendingPathComponent("scripts/backstop.sh"))
         try fm.copyItem(atPath: "/usr/bin/true", toPath: binroot.appendingPathComponent("Insomnia").path)
+        let resourceBundle = binroot.appendingPathComponent("Insomnia_Insomnia.bundle", isDirectory: true)
+        try fm.createDirectory(at: resourceBundle, withIntermediateDirectories: true)
+        for language in ["en", "ru"] {
+            try fm.copyItem(
+                at: Self.repoRoot.appendingPathComponent("Sources/Insomnia/Resources/\(language).lproj"),
+                to: resourceBundle.appendingPathComponent("\(language).lproj")
+            )
+        }
 
         func fake(_ name: String, _ body: String) throws -> URL {
             let url = bin.appendingPathComponent(name)
@@ -383,8 +397,28 @@ final class PackagingTests: XCTestCase {
         XCTAssertEqual(r.status, 0, r.output)
         let bundle = out.appendingPathComponent("Insomnia.app")
         XCTAssertEqual(r.output.components(separatedBy: "\n").filter { !$0.isEmpty }.last, bundle.path, "the bundle path is printed last")
-        for rel in ["Contents/MacOS/Insomnia", "Contents/Info.plist", "Contents/Resources/AppIcon.icns", "Contents/Resources/backstop.sh", "Contents/_CodeSignature/CodeResources"] {
+        for rel in [
+            "Contents/MacOS/Insomnia",
+            "Contents/Info.plist",
+            "Contents/Resources/AppIcon.icns",
+            "Contents/Resources/backstop.sh",
+            "Contents/Resources/Insomnia_Insomnia.bundle/en.lproj/Localizable.strings",
+            "Contents/Resources/Insomnia_Insomnia.bundle/en.lproj/Localizable.stringsdict",
+            "Contents/Resources/Insomnia_Insomnia.bundle/ru.lproj/Localizable.strings",
+            "Contents/Resources/Insomnia_Insomnia.bundle/ru.lproj/Localizable.stringsdict",
+            "Contents/Resources/en.lproj/InfoPlist.strings",
+            "Contents/Resources/ru.lproj/InfoPlist.strings",
+            "Contents/_CodeSignature/CodeResources",
+        ] {
             XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.appendingPathComponent(rel).path), rel)
+        }
+        for language in ["en", "ru"] {
+            let actualStrings = bundle.appendingPathComponent("Contents/Resources/Insomnia_Insomnia.bundle/\(language).lproj/Localizable.strings")
+            let sourceStrings = Self.repoRoot.appendingPathComponent("Sources/Insomnia/Resources/\(language).lproj/Localizable.strings")
+            XCTAssertEqual(try Data(contentsOf: actualStrings), try Data(contentsOf: sourceStrings), "SwiftPM resource bytes for \(language)")
+            let actualInfoStrings = bundle.appendingPathComponent("Contents/Resources/\(language).lproj/InfoPlist.strings")
+            let sourceInfoStrings = Self.repoRoot.appendingPathComponent("Resources/\(language).lproj/InfoPlist.strings")
+            XCTAssertEqual(try Data(contentsOf: actualInfoStrings), try Data(contentsOf: sourceInfoStrings), "Info.plist localization bytes for \(language)")
         }
         let perms = try FileManager.default.attributesOfItem(atPath: Paths.backstopScript(inBundle: bundle).path)[.posixPermissions] as? Int
         XCTAssertEqual(perms.map { $0 & 0o111 }, 0o111, "backstop.sh is executable")
@@ -466,6 +500,7 @@ final class PackagingTests: XCTestCase {
         let (script, calls) = try patchedBuildApp(recordingCodesign: true)
         let out = scratch.appendingPathComponent("out", isDirectory: true)
         let app = out.appendingPathComponent("Insomnia.app").path
+        let binroot = scratch.appendingPathComponent("binroot", isDirectory: true).path
         let shadow = scratch.appendingPathComponent("shadow", isDirectory: true)
         try FileManager.default.createDirectory(at: shadow, withIntermediateDirectories: true)
         for name in ["rm", "mkdir", "cp", "chmod"] {
@@ -485,6 +520,9 @@ final class PackagingTests: XCTestCase {
             "mkdir -p \(app)/Contents/MacOS \(app)/Contents/Resources",
             "cp \(checkout)/Resources/Info.plist \(app)/Contents/Info.plist",
             "cp \(checkout)/Resources/AppIcon.icns \(app)/Contents/Resources/AppIcon.icns",
+            "cp -R \(binroot)/Insomnia_Insomnia.bundle \(app)/Contents/Resources/",
+            "cp -R \(checkout)/Resources/en.lproj \(app)/Contents/Resources/",
+            "cp -R \(checkout)/Resources/ru.lproj \(app)/Contents/Resources/",
             "cp \(checkout)/scripts/backstop.sh \(app)/Contents/Resources/backstop.sh",
             "chmod 755 \(app)/Contents/Resources/backstop.sh",
         ] {
