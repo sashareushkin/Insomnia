@@ -21,21 +21,24 @@ struct PillView: View {
     let reduceMotion: Bool
     let onTap: () -> Void
 
+    @State private var localization = LocalizationManager.shared
+
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 7, style: .continuous) }
     private var isPlaceholder: Bool { text == nil }
     /// The ring only appears once the pills have landed.
     private var ringVisible: Bool { focused && glowVisible }
 
     var body: some View {
+        let language = localization.language
         ZStack {
             // The slot: the placeholder laid out invisibly at the typed weight
             // and padding, so no digit, weight or padding change can alter
             // the pill's width and the menu bar never re-lays out on a key.
-            Text(field.placeholder)
+            Text(L10n.string(field.placeholder, language: language))
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .padding(.horizontal, 10)
                 .hidden()
-            Text(text ?? field.placeholder)
+            Text(text ?? L10n.string(field.placeholder, language: language))
                 .font(.system(size: 12, weight: isPlaceholder ? .regular : .semibold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(isPlaceholder ? Color.white.opacity(0.42) : Color.white)
@@ -58,7 +61,7 @@ struct PillView: View {
         }
         .environment(\.colorScheme, .dark)
         .contentShape(Rectangle())
-        .help(field.help)
+        .help(L10n.presentation(field.help, language: language))
         .onTapGesture(perform: onTap)
         .phaseAnimator([CGFloat(1), Motion.bounceScale(reduceMotion: reduceMotion), 1], trigger: focused ? focusBounce : 0) { content, scale in
             content.scaleEffect(scale)

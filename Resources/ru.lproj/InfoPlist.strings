@@ -1,0 +1,2 @@
+"NSLocationUsageDescription" = "Insomnia запрашивает доступ к геопозиции, чтобы macOS разрешила показывать имена сетей Wi-Fi и подключаться к вашей точке доступа.";
+"NSLocationWhenInUseUsageDescription" = "Insomnia запрашивает доступ к геопозиции, чтобы macOS разрешила показывать имена сетей Wi-Fi и подключаться к вашей точке доступа.";

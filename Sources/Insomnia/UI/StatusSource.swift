@@ -62,15 +62,15 @@ final class PlaceholderStatus: StatusSource {
 enum StatusLines {
     /// "Lid: closed · 4.1 W · Wi-Fi: iPhone". Unknown parts are omitted.
     static func machine(lidClosed: Bool, watts: Double?, wifiSSID: String?, batteryPercent: Int?, isCharging: Bool) -> String {
-        var parts: [String] = ["Lid: \(lidClosed ? "closed" : "open")"]
+        var parts: [String] = [L10n.format("Lid: %@", L10n.string(lidClosed ? "closed" : "open"))]
         if let w = watts {
-            parts.append(String(format: "%.1f W", w))
+            parts.append(L10n.format("%.1f W", w))
         }
         if let p = batteryPercent {
-            parts.append(isCharging ? "\(p)% charging" : "\(p)%")
+            parts.append(L10n.format(isCharging ? "%d%% charging" : "%d%%", p))
         }
         if let ssid = wifiSSID, !ssid.isEmpty {
-            parts.append("Wi-Fi: \(ssid)")
+            parts.append(L10n.format("Wi-Fi: %@", ssid))
         }
         return parts.joined(separator: " \u{00B7} ")
     }
@@ -79,13 +79,13 @@ enum StatusLines {
     static func actions(frozenCount: Int, dockerPaused: Bool, lastGap: TimeInterval?) -> String? {
         var parts: [String] = []
         if frozenCount > 0 {
-            parts.append(frozenCount == 1 ? "1 app frozen" : "\(frozenCount) apps frozen")
+            parts.append(L10n.plural("appsFrozen", count: frozenCount))
         }
         if dockerPaused {
-            parts.append("Docker paused")
+            parts.append(L10n.string("Docker paused"))
         }
         if let gap = lastGap, gap > 0 {
-            parts.append("last gap \(Int(gap.rounded()))s")
+            parts.append(L10n.format("last gap %d s", Int(gap.rounded())))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " \u{00B7} ")
     }
@@ -96,10 +96,12 @@ enum StatusLines {
         let names: String
         switch browsers.count {
         case 1: names = browsers[0]
-        case 2: names = "\(browsers[0]) and \(browsers[1])"
-        default: names = browsers.dropLast().joined(separator: ", ") + ", and " + browsers.last!
+        case 2: names = L10n.format("%@ and %@", browsers[0], browsers[1])
+        default: names = L10n.format("%@, and %@", browsers.dropLast().joined(separator: ", "), browsers.last!)
         }
-        return "\u{26A0} \(names) \(browsers.count == 1 ? "is" : "are") throttled"
+        return browsers.count == 1
+            ? L10n.format("\u{26A0} %@ is throttled", names)
+            : L10n.format("\u{26A0} %@ are throttled", names)
     }
 }
 
@@ -117,11 +119,11 @@ enum SleepHeldLine {
     static func line(sessionActive: Bool, sleepHeld: Bool) -> Line? {
         switch (sessionActive, sleepHeld) {
         case (true, true):
-            Line(text: "Sleep held per journal \u{2014} not verified live", isWarning: false)
+            Line(text: L10n.string("Sleep held per journal \u{2014} not verified live"), isWarning: false)
         case (true, false):
-            Line(text: "Sleep is not held \u{2014} this session is not keeping the Mac awake", isWarning: true)
+            Line(text: L10n.string("Sleep is not held \u{2014} this session is not keeping the Mac awake"), isWarning: true)
         case (false, true):
-            Line(text: "Sleep still held with no session", isWarning: true)
+            Line(text: L10n.string("Sleep still held with no session"), isWarning: true)
         case (false, false):
             nil
         }
@@ -133,7 +135,7 @@ enum SleepHeldLine {
 enum WiFiStatusName {
     static func display(ssid: String?, locationAuthorized: Bool) -> String? {
         if let ssid, !ssid.isEmpty { return ssid }
-        return locationAuthorized ? nil : "on (name hidden until Location is allowed)"
+        return locationAuthorized ? nil : L10n.string("on (name hidden until Location is allowed)")
     }
 }
 

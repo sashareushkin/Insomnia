@@ -30,9 +30,9 @@ enum StatusMenu {
         let kind: Kind
     }
 
-    static let endSessionTitle = "End session"
-    static let settingsTitle = "Settings\u{2026}"
-    static let quitTitle = "Quit Insomnia"
+    static var endSessionTitle: String { L10n.string("End session") }
+    static var settingsTitle: String { L10n.string("Settings\u{2026}") }
+    static var quitTitle: String { L10n.string("Quit Insomnia") }
 
     /// Disabled status lines, an optional end action, then Settings… and Quit. Empty
     /// lines are dropped, and the separator only appears when something
@@ -73,7 +73,7 @@ enum StatusMenu {
             out.append(Item(title: actions, kind: .info))
         }
         if lidSimulationBuild {
-            out.append(Item(title: LidSimulationBuild.marker, kind: .warning))
+            out.append(Item(title: L10n.presentation(LidSimulationBuild.marker), kind: .warning))
         }
         if let throttle = present(StatusLines.throttleWarning(throttledBrowsers.map(\.name))) {
             out.append(Item(title: throttle, kind: .warning))
@@ -81,32 +81,32 @@ enum StatusMenu {
             // live item so the relaunch is still one click away, as it was
             // from the popover this menu replaced.
             for browser in throttledBrowsers {
-                out.append(Item(title: "Relaunch \(browser.name) unthrottled", kind: .relaunchBrowser(browser)))
+                out.append(Item(title: L10n.format("Relaunch %@ unthrottled", browser.name), kind: .relaunchBrowser(browser)))
             }
         }
         for problem in relaunchProblems.compactMap(present) {
-            out.append(Item(title: "\u{26A0} \(problem)", kind: .warning))
+            out.append(Item(title: "\u{26A0} \(L10n.presentation(problem))", kind: .warning))
         }
         if let hotspot = present(hotspotWarning) {
-            out.append(Item(title: hotspot, kind: .warning))
+            out.append(Item(title: L10n.presentation(hotspot), kind: .warning))
         }
         // The sudo pmset left running comes before the session error: it
         // holds every change and quit until it exits, and the line goes
         // away then.
         if let command = present(commandRunning) {
-            out.append(Item(title: "\u{26A0} \(command)", kind: .warning))
+            out.append(Item(title: "\u{26A0} \(L10n.presentation(command))", kind: .warning))
         }
         if let error = present(error) {
-            out.append(Item(title: "\u{26A0} \(error)", kind: .warning))
+            out.append(Item(title: "\u{26A0} \(L10n.presentation(error))", kind: .warning))
         }
         // Its own line, after the error: a restore that failed and a bit
         // someone else set can both be true of the same reconcile.
         if let foreignSleep = present(foreignSleep) {
-            out.append(Item(title: "\u{26A0} \(foreignSleep)", kind: .warning))
+            out.append(Item(title: "\u{26A0} \(L10n.presentation(foreignSleep))", kind: .warning))
         }
         for waiting in outputsWaiting {
-            out.append(Item(title: "\u{26A0} \(SessionManager.stillMutedLine(waiting))", kind: .warning))
-            out.append(Item(title: "Stop waiting for \(waiting.label)", kind: .stopWaitingForOutput(waiting)))
+            out.append(Item(title: "\u{26A0} \(L10n.presentation(SessionManager.stillMutedLine(waiting)))", kind: .warning))
+            out.append(Item(title: L10n.format("Stop waiting for %@", waiting.label), kind: .stopWaitingForOutput(waiting)))
         }
         if !out.isEmpty {
             out.append(Item(title: "", kind: .separator))
@@ -189,14 +189,20 @@ enum StatusMenu {
 /// anything. Pure so the copy is testable; the controller shows it as an
 /// NSAlert.
 struct RelaunchPrompt: Equatable {
-    static let confirmTitle = "Quit and relaunch"
-    static let cancelTitle = "Cancel"
+    static var confirmTitle: String { L10n.string("Quit and relaunch") }
+    static var cancelTitle: String { L10n.string("Cancel") }
 
     let title: String
     let message: String
 
     init(browser name: String) {
-        title = "Quit and relaunch \(name)?"
-        message = "Insomnia quits \(name) and opens it again with the two flags that stop it throttling hidden windows. Your windows and tabs come back only if \(name) is set to reopen them on startup. If \(name) has not quit after \(Int(BrowserThrottle.quitTimeout)) s, nothing is relaunched."
+        title = L10n.format("Quit and relaunch %@?", name)
+        message = L10n.format(
+            "Insomnia quits %@ and opens it again with the two flags that stop it throttling hidden windows. Your windows and tabs come back only if %@ is set to reopen them on startup. If %@ has not quit after %d s, nothing is relaunched.",
+            name,
+            name,
+            name,
+            Int(BrowserThrottle.quitTimeout)
+        )
     }
 }

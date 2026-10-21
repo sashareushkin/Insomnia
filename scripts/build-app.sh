@@ -111,7 +111,8 @@ STALE
   fi
   exit "$build_rc"
 fi
-BIN="$("$SWIFT" build -c release ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"} --show-bin-path)/Insomnia"
+BIN_DIR="$("$SWIFT" build -c release ${BUILD_FLAGS[@]+"${BUILD_FLAGS[@]}"} --show-bin-path)"
+BIN="$BIN_DIR/Insomnia"
 [[ -x "$BIN" ]] || { echo "binary not found at $BIN" >&2; exit 1; }
 
 # 2. Bundle ------------------------------------------------------------------
@@ -122,6 +123,16 @@ step "Assembling $APP"
 "$CP" "$BIN" "$APP/Contents/MacOS/Insomnia"
 "$CP" "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 "$CP" "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+# SwiftPM keeps processed .lproj resources in the target's resource bundle.
+# Copy the bundle beside the executable so Bundle.module works in the app;
+# InfoPlist.strings belong to the application bundle itself.
+RESOURCE_BUNDLE="$BIN_DIR/Insomnia_Insomnia.bundle"
+[[ -d "$RESOURCE_BUNDLE" ]] || { echo "SwiftPM localization bundle not found at $RESOURCE_BUNDLE" >&2; exit 1; }
+"$CP" -R "$RESOURCE_BUNDLE" "$APP/Contents/Resources/"
+for language in en ru; do
+  [[ -d "$ROOT/Resources/$language.lproj" ]] || { echo "missing InfoPlist localization: $language" >&2; exit 1; }
+  "$CP" -R "$ROOT/Resources/$language.lproj" "$APP/Contents/Resources/"
+done
 # backstop.sh goes into the bundle before it is signed, so the signature's
 # resource seal covers it. The LaunchAgent install.sh writes verifies the
 # bundle and only then runs this copy; an edited script fails that check.

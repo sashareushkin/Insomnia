@@ -59,8 +59,8 @@ final class Notifier: Notifying, @unchecked Sendable {
         guard available else { return }
         requestAuthorizationIfNeeded()
         let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
+        content.title = L10n.presentation(title)
+        content.body = L10n.presentation(body)
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in
             if let error {

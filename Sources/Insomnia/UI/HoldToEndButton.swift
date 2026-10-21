@@ -13,12 +13,14 @@ struct HoldToEndButton: View {
 
     var state: EndHoldState? = nil
     @State private var localState = EndHoldState()
+    @State private var localization = LocalizationManager.shared
     private var hold: EndHoldState { state ?? localState }
 
     private let ringDiameter: CGFloat = 18
     private let lineWidth: CGFloat = 1.6
 
     var body: some View {
+        let language = localization.language
         ZStack {
             Circle()
                 .stroke(Color.white.opacity(0.14), lineWidth: lineWidth)
@@ -45,9 +47,9 @@ struct HoldToEndButton: View {
             }, cancelOnRemoval: state == nil)
         }
         .onDisappear { if state == nil { hold.cancel() } }
-        .help("Hold to end the session")
-        .accessibilityLabel("End session")
-        .accessibilityHint("Press and hold")
+        .help(L10n.string("Hold to end the session", language: language))
+        .accessibilityLabel(L10n.string("End session", language: language))
+        .accessibilityHint(L10n.string("Press and hold", language: language))
         .accessibilityAction { action() }
     }
 

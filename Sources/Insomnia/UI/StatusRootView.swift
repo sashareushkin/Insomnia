@@ -22,6 +22,7 @@ struct StatusRootView: View {
     let onWidthChange: (CGFloat) -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotionEnv
+    @State private var localization = LocalizationManager.shared
 
     /// Scale of a pill slot's content while hidden; the same shape as
     /// `Motion.pillTransition`, driven by `visiblePills` instead of by
@@ -64,6 +65,7 @@ struct StatusRootView: View {
     }
 
     var body: some View {
+        let language = localization.language
         HStack(spacing: Self.slotSpacing) {
             icon
             // What comes and goes with the layout carries its own animation
@@ -101,6 +103,7 @@ struct StatusRootView: View {
         // The host is kept as wide as the widest content it has held, so the
         // content must sit at its leading edge rather than centred in it.
         .frame(maxWidth: .infinity, alignment: .leading)
+        .environment(\.locale, language.locale)
     }
 
     /// A closed eye while idle; it opens while sleep is held, so the app
@@ -115,7 +118,7 @@ struct StatusRootView: View {
                 Motion.snappy(reduceMotion: reduceMotion)
             }
             .onTapGesture(perform: onTapIcon)
-            .accessibilityLabel("Insomnia")
+            .accessibilityLabel(L10n.string("Insomnia", language: localization.language))
     }
 
     /// All three slots are in the layout whenever they are present;
@@ -193,7 +196,7 @@ struct StatusRootView: View {
     }
 
     private func countdownLabel(_ text: String) -> some View {
-        Text(text)
+        Text(L10n.presentation(text, language: localization.language))
             .font(.system(size: 13, weight: .medium, design: .rounded))
             .monospacedDigit()
             // No content transition and no animation: a per-frame one is a
@@ -204,20 +207,20 @@ struct StatusRootView: View {
             .transition(Motion.countdownTransition(reduceMotion: reduceMotion))
             .contentShape(Rectangle())
             .onTapGesture(perform: onTapCountdown)
-            .accessibilityLabel(model.phase == .starting ? "Starting session" : text)
+            .accessibilityLabel(model.phase == .starting ? L10n.string("Starting session") : L10n.presentation(text))
     }
 
     /// The manager refused the start: say so next to the pills the value is
     /// still in. The full reason lives in the right-click menu.
     private func startError(_ text: String) -> some View {
-        Label(text, systemImage: "exclamationmark.triangle.fill")
+        Label(L10n.presentation(text), systemImage: "exclamationmark.triangle.fill")
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .labelStyle(.titleAndIcon)
             .foregroundStyle(Color(brand: BrandPalette.violet))
             .lineLimit(1)
             .fixedSize()
             .transition(Motion.errorTransition(reduceMotion: reduceMotion))
-            .accessibilityLabel("Start failed")
+            .accessibilityLabel(L10n.string("Start failed"))
     }
 }
 
