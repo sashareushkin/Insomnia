@@ -330,11 +330,12 @@ final class PackagingTests: XCTestCase {
         try fm.copyItem(at: Self.repoRoot.appendingPathComponent("scripts/backstop.sh"), to: checkout.appendingPathComponent("scripts/backstop.sh"))
         try fm.copyItem(atPath: "/usr/bin/true", toPath: binroot.appendingPathComponent("Insomnia").path)
         let resourceBundle = binroot.appendingPathComponent("Insomnia_Insomnia.bundle", isDirectory: true)
-        try fm.createDirectory(at: resourceBundle, withIntermediateDirectories: true)
+        let resourceBundleResources = resourceBundle.appendingPathComponent("Contents/Resources", isDirectory: true)
+        try fm.createDirectory(at: resourceBundleResources, withIntermediateDirectories: true)
         for language in ["en", "ru"] {
             try fm.copyItem(
                 at: Self.repoRoot.appendingPathComponent("Sources/Insomnia/Resources/\(language).lproj"),
-                to: resourceBundle.appendingPathComponent("\(language).lproj")
+                to: resourceBundleResources.appendingPathComponent("\(language).lproj")
             )
         }
 
@@ -402,10 +403,10 @@ final class PackagingTests: XCTestCase {
             "Contents/Info.plist",
             "Contents/Resources/AppIcon.icns",
             "Contents/Resources/backstop.sh",
-            "Contents/Resources/Insomnia_Insomnia.bundle/en.lproj/Localizable.strings",
-            "Contents/Resources/Insomnia_Insomnia.bundle/en.lproj/Localizable.stringsdict",
-            "Contents/Resources/Insomnia_Insomnia.bundle/ru.lproj/Localizable.strings",
-            "Contents/Resources/Insomnia_Insomnia.bundle/ru.lproj/Localizable.stringsdict",
+            "Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/en.lproj/Localizable.strings",
+            "Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/en.lproj/Localizable.stringsdict",
+            "Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/ru.lproj/Localizable.strings",
+            "Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/ru.lproj/Localizable.stringsdict",
             "Contents/Resources/en.lproj/InfoPlist.strings",
             "Contents/Resources/ru.lproj/InfoPlist.strings",
             "Contents/_CodeSignature/CodeResources",
@@ -413,7 +414,7 @@ final class PackagingTests: XCTestCase {
             XCTAssertTrue(FileManager.default.fileExists(atPath: bundle.appendingPathComponent(rel).path), rel)
         }
         for language in ["en", "ru"] {
-            let actualStrings = bundle.appendingPathComponent("Contents/Resources/Insomnia_Insomnia.bundle/\(language).lproj/Localizable.strings")
+            let actualStrings = bundle.appendingPathComponent("Contents/Resources/Insomnia_Insomnia.bundle/Contents/Resources/\(language).lproj/Localizable.strings")
             let sourceStrings = Self.repoRoot.appendingPathComponent("Sources/Insomnia/Resources/\(language).lproj/Localizable.strings")
             XCTAssertEqual(try Data(contentsOf: actualStrings), try Data(contentsOf: sourceStrings), "SwiftPM resource bytes for \(language)")
             let actualInfoStrings = bundle.appendingPathComponent("Contents/Resources/\(language).lproj/InfoPlist.strings")
