@@ -27,7 +27,7 @@ struct SettingsView: View {
 
     var body: some View {
         let language = localization.language
-        NavigationSplitView {
+        HStack(spacing: 0) {
             List(selection: $selection) {
                 ForEach(SettingsSection.allCases) { section in
                     Label {
@@ -43,21 +43,26 @@ struct SettingsView: View {
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
             .background(.regularMaterial, ignoresSafeAreaEdges: .top)
-            .navigationSplitViewColumnWidth(
-                min: SettingsLayout.sidebarColumnWidth,
-                ideal: SettingsLayout.sidebarColumnWidth,
-                max: SettingsLayout.sidebarColumnWidth
-            )
-        } detail: {
+            .frame(width: SettingsLayout.sidebarColumnWidth)
+
+            Divider()
+
             destination(for: selection)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .navigationTitle(L10n.string(selection.titleKey, language: language))
         }
-        .navigationSplitViewStyle(.balanced)
         .frame(
             minWidth: SettingsLayout.windowContentSize.width,
             minHeight: SettingsLayout.windowContentSize.height
         )
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Text(L10n.string(selection.titleKey, language: language))
+                    .font(.system(size: 24, weight: .semibold))
+                    .lineLimit(1)
+            }
+        }
+        .toolbarBackground(.regularMaterial, for: .windowToolbar)
+        .toolbarBackgroundVisibility(.automatic, for: .windowToolbar)
         .environment(\.locale, language.locale)
         .onAppear {
             loadPassword()

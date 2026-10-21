@@ -52,7 +52,8 @@ final class SettingsWindow {
         window.title = L10n.string("Insomnia Settings", language: language)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.titlebarAppearsTransparent = true
-        window.titleVisibility = .visible
+        window.titleVisibility = .hidden
+        window.toolbarStyle = .unified
         // Closing settings must not deallocate the window: the status item
         // keeps a reference and reopens the same one.
         window.isReleasedWhenClosed = false
