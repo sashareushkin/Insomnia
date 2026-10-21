@@ -6,6 +6,19 @@
 
 Укажите команды, результаты, пропуски и незавершённые проверки.
 
+Для PR в `custom` приложите exact-SHA отчёт `scripts/verify-local.sh safe`:
+
+- Результат: PASS / FAIL / INCOMPLETE
+- Candidate SHA:
+- `origin/custom` base SHA:
+- Tested merge-tree SHA:
+- Режим и ОС / Xcode / Swift:
+- Ссылка на `verification.md` и `verification.json`:
+- Пропуски / падения / оставшиеся проверки:
+
+Локальный отчёт не является GitHub status check и не должен публиковаться как
+синтетический статус.
+
 ## Изменения системной логики
 
 Затронуты ли sleep/power, остановка процессов, recovery journal/backstop или

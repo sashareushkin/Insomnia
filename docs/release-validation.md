@@ -5,6 +5,11 @@ behind the safety fixes. It is not a certification that unattended or
 lid-closed use is safe. The checks to run before the next release are in
 [Releasing](releasing.md#real-mac-checks-before-a-release).
 
+Hosted check references below are historical evidence from the upstream
+release/PRs described in each entry. They are not the current verification gate
+for this fork; use [fork-workflow.md](fork-workflow.md#local-verification-and-pull-requests)
+for local checks against the exact candidate and base SHAs.
+
 ## v0.1.0
 
 The maintainer ran these checks on a MacBook with an Apple M5 (Mac17,2) and
