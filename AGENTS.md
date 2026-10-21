@@ -35,4 +35,4 @@ Insomnia controls sleep, power settings, process suspension and restoration.
 - Pull requests must include the local verification summary from `.github/pull_request_template.md` and link the generated report.
 - Upstream integration candidates must be checked as the merge of `origin/main` into the latest `origin/custom`, using `scripts/verify-local.sh safe --candidate origin/main --base origin/custom`.
 - Do not post synthetic GitHub statuses or claim GitHub Actions passed based on a local report.
-- The `custom` branch's previous required `Swift build and test` check must be reviewed and replaced with the documented manual verification gate before merging this infrastructure change. Keep pull-request, conversation-resolution, no-force-push and no-deletion protections.
+- The `custom` branch's previous required `Swift build and test` check was removed before merging the local verification infrastructure. Keep pull-request, conversation-resolution, no-force-push and no-deletion protections; review the branch protection settings before any future policy change.

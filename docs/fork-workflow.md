@@ -108,12 +108,12 @@ protection; all subsequent work uses PRs.
 ### Required-check migration
 
 The repository previously required the GitHub status context `Swift build and
-test`. Deleting its workflow does not remove that branch-protection rule. The
-owner must review `Settings → Branches → custom` and remove that hosted check
-before the workflow-removal PR can merge. Keep the PR and conversation
-resolution protections, and keep force-push and deletion disabled. The manual
-gate is the reviewed exact-SHA local report plus the owner's explicit merge
-authorization; do not post a fabricated status to satisfy the old rule.
+test`. The owner removed that status requirement from `custom` protection on
+2026-10-20 before merging the workflow-removal change. Protection remains
+enabled: changes require pull requests, conversation resolution is required,
+and force-push and branch deletion are disabled. The manual gate is the
+reviewed exact-SHA local report plus the owner's explicit merge authorization;
+do not post a fabricated status to satisfy a hosted check.
 
 ## Synchronization
 
