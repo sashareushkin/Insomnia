@@ -16,6 +16,10 @@ struct LidCloseSettingsView: View {
                 }
             }
 
+            if let automation = manager.lidAutomation {
+                LidAngleSettingsSection(manager: manager, automation: automation)
+            }
+
             Section(L10n.string("Display and keyboard")) {
                 Toggle(
                     L10n.string("Turn off the display and keyboard backlight"),

@@ -4,6 +4,7 @@ import Observation
 enum EndReason: String, Sendable {
     case timer
     case user
+    case lidAngle
     case quit
     case batteryFloor
     /// Battery present but its level unreadable on two consecutive reads
@@ -95,7 +96,10 @@ enum TransactionRefusal: Error, Sendable {
 final class SessionManager {
     private(set) var session: Session?
     private(set) var state: RuntimeState
-    var config: Config
+    var config: Config {
+        didSet { lidAutomation?.configChanged(from: oldValue) }
+    }
+    var lidAutomation: LidAutomationController?
     /// Minute-granularity remaining time for the popover ("2h 14m").
     private(set) var remainingText: String = ""
     /// Live `H:MM:SS` countdown for the status item, updated at 1 Hz.
@@ -1167,29 +1171,47 @@ final class SessionManager {
     /// undone from the journal like an end, and the journal keeps the entry
     /// until that undo is confirmed.
     func start(duration: TimeInterval) async {
+        lidAutomation?.manualOverride()
+        _ = await start(duration: duration, authorized: nil)
+    }
+
+    func startFromLidAngle(authorized: @escaping @MainActor @Sendable () -> Bool) async -> Date? {
+        await start(duration: config.defaultPreset, authorized: authorized)
+    }
+
+    private func start(
+        duration: TimeInterval, authorized: (@MainActor @Sendable () -> Bool)?
+    ) async -> Date? {
+        guard authorized?() != false else { return nil }
         guard !quitRequested else {
             Log.info("start ignored: quit requested")
-            return
+            return nil
         }
         guard pendingEnd == nil else {
             fail("start refused: the previous session is still being ended; retrying shortly")
-            return
+            return nil
         }
         let ticket = endTicket
-        _ = await exclusive("start") { await self.performStart(duration: duration, ticket: ticket) }
+        let result = await exclusive("start") {
+            await self.performStart(duration: duration, ticket: ticket, authorized: authorized)
+        }
         // A start that goes through before a refused launch reconcile runs
         // again drops that reconcile, and takes over its check.
         await settleEarlierCommand()
+        return (try? result.get()) ?? nil
     }
 
-    private func performStart(duration: TimeInterval, ticket: Int) async {
+    private func performStart(
+        duration: TimeInterval, ticket: Int, authorized: (@MainActor @Sendable () -> Bool)?
+    ) async -> Date? {
+        guard authorized?() != false else { return nil }
         guard session == nil else {
             Log.info("start ignored: session already active")
-            return
+            return nil
         }
         guard endTicket == ticket, !quitRequested else {
             Log.info("start abandoned: an end was requested first")
-            return
+            return nil
         }
         let now = clock()
         let new = SessionMath.newSession(now: now, duration: duration, maxDuration: config.maxDuration)
@@ -1206,7 +1228,14 @@ final class SessionManager {
             // could not move it aside. It may be a valid session, and a
             // rollback could not put it back.
             fail("start refused, nothing changed: session.json could not be read (\(error.localizedDescription)). Remove it or move it out of \(paths.appSupport.path), then start again")
-            return
+            return nil
+        }
+
+        // Reconcile may be waiting to retry. Keep the existing file for it,
+        // even if the app has not yet recovered the session into memory.
+        if authorized != nil, sessionBefore != nil {
+            Log.info("lid angle start ignored: session on disk awaits reconciliation")
+            return nil
         }
 
         do {
@@ -1216,7 +1245,7 @@ final class SessionManager {
         } catch {
             fail("could not write session: \(error.localizedDescription)")
             rollBackStart(journal: journalBefore, session: sessionBefore)
-            return
+            return nil
         }
 
         // The agent is confirmed loaded before sleep is disabled, so a crash
@@ -1226,12 +1255,18 @@ final class SessionManager {
         } catch {
             rollBackStart(journal: journalBefore, session: sessionBefore)
             fail("could not arm backstop: \(error.localizedDescription)")
-            return
+            return nil
         }
         guard endTicket == ticket else {
             rollBackStart(journal: journalBefore, session: sessionBefore)
             Log.info("start abandoned before disabling sleep: end requested meanwhile")
-            return
+            return nil
+        }
+
+        guard authorized?() != false else {
+            rollBackStart(journal: journalBefore, session: sessionBefore)
+            Log.info("lid angle start abandoned before disabling sleep: crossing no longer valid")
+            return nil
         }
 
         do {
@@ -1242,18 +1277,18 @@ final class SessionManager {
             // written (the backstop honours that deadline if Insomnia dies);
             // the start is undone like an end once the command has exited.
             stopTransaction(for: still, thenEnd: .startFailed)
-            return
+            return nil
         } catch {
             fail("could not disable sleep: \(error.localizedDescription)")
             _ = await performEnd(reason: .startFailed)
-            return
+            return nil
         }
         guard endTicket == ticket else {
             // Sleep is disabled and journaled as ours. The end that was
             // requested runs next and restores from that journal; the session
             // is never surfaced.
             Log.info("start abandoned after disabling sleep: end requested meanwhile; journal left for it")
-            return
+            return nil
         }
 
         session = new
@@ -1266,10 +1301,12 @@ final class SessionManager {
         // Every observer lives in AppServices.
         services?.start(for: self)
         // PR3: schedule "5 minutes left" notification.
+        return new.startedAt
     }
 
     func extend(by extra: TimeInterval) async {
         guard session != nil else { return }
+        lidAutomation?.manualOverride()
         let ticket = endTicket
         _ = await exclusive("extend") { await self.performExtend(by: extra, ticket: ticket) }
     }
@@ -1311,6 +1348,7 @@ final class SessionManager {
     /// be read the end changes nothing and waits for a person.
     @discardableResult
     func end(reason: EndReason) async -> EndOutcome {
+        if reason == .user { lidAutomation?.manualOverride() }
         endTicket += 1
         if reason == .quit { quitRequested = true }
         retryTimer?.invalidate()
@@ -3184,6 +3222,7 @@ final class SessionManager {
         switch reason {
         case .timer: "Time is up. Sleep is back to normal."
         case .user: "Ended by you. Sleep is back to normal."
+        case .lidAngle: "Ended when the lid opened. Sleep is back to normal."
         case .quit: "Insomnia quit. Sleep is back to normal."
         case .batteryFloor: "Battery fell below \(config.endFloor)%. Sleep is back to normal."
         case .batteryUnreadable: "The battery level could not be read twice in a row, so the \(config.endFloor)% floor could not be applied. Sleep is back to normal."

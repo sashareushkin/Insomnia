@@ -266,3 +266,35 @@
 "Agent apps are never frozen or throttled. Editors, AI apps, terminals, browsers, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps are also protected from the automatic lid-close scope even when they are not listed here; adding one to the freeze list above overrides that built-in automatic protection. The hard denylist still prevents explicit freezing of agent apps, Apple apps, Insomnia and Docker Desktop." = "Agent apps are never frozen or throttled. Editors, AI apps, terminals, browsers, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps are also protected from the automatic lid-close scope even when they are not listed here; adding one to the freeze list above overrides that built-in automatic protection. The hard denylist still prevents explicit freezing of agent apps, Apple apps, Insomnia and Docker Desktop.";
 "The password is kept in the login keychain, readable without a prompt only by the build of Insomnia that saved it; after a reinstall, enter it again." = "The password is kept in the login keychain, readable without a prompt only by the build of Insomnia that saved it; after a reinstall, enter it again.";
 "This action only targets panes marked with the command above. With Enter enabled, it can submit unfinished input in a marked pane." = "This action only targets panes marked with the command above. With Enter enabled, it can submit unfinished input in a marked pane.";
+
+/* Lid angle */
+"Lid angle automation" = "Lid angle automation";
+"Automatically start and end Insomnia" = "Automatically start and end Insomnia";
+"Start while closing" = "Start while closing";
+"End while opening" = "End while opening";
+"Starts a session for the default timer duration. Opening the lid ends only a session started by lid angle automation." = "Starts a session for the default timer duration. Opening the lid ends only a session started by lid angle automation.";
+"Lid angle diagnostics" = "Lid angle diagnostics";
+"Monitor the sensor for diagnostics" = "Monitor the sensor for diagnostics";
+"Lid angle sensor" = "Lid angle sensor";
+"Current angle" = "Current angle";
+"Direction" = "Direction";
+"Angular speed" = "Angular speed";
+"%@°/s" = "%@°/s";
+"Successful reads per second" = "Successful reads per second";
+"Angle changes per second" = "Angle changes per second";
+"Read errors" = "Read errors";
+"Last successful read" = "Last successful read";
+"Monitoring off" = "Monitoring off";
+"Looking for the sensor…" = "Looking for the sensor…";
+"Paused for system sleep" = "Paused for system sleep";
+"Available" = "Available";
+"No supported lid angle sensor found" = "No supported lid angle sensor found";
+"Unrecognized report · retrying" = "Unrecognized report · retrying";
+"Could not open the sensor (%@) · retrying" = "Could not open the sensor (%@) · retrying";
+"Could not read the sensor (%@) · retrying" = "Could not read the sensor (%@) · retrying";
+"Detecting…" = "Detecting…";
+"Stationary" = "Stationary";
+"Opening" = "Opening";
+"Closing" = "Closing";
+"%@°" = "%@°";
+"Ended when the lid opened. Sleep is back to normal." = "Ended when the lid opened. Sleep is back to normal.";
