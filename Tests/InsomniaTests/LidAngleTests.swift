@@ -190,6 +190,22 @@ final class LidAngleTests: XCTestCase {
     }
 
     @MainActor
+    func testAutomaticStartDoesNotReplaceASessionOnDiskAwaitingReconcile() async throws {
+        try await withAutomation { harness, manager, automation in
+            let existing = Session(startedAt: harness.clock.now, endsAt: harness.clock.now.addingTimeInterval(600))
+            try harness.store.saveSession(existing)
+
+            close(automation)
+            await automation.waitForOperation()
+
+            XCTAssertFalse(manager.isActive)
+            XCTAssertEqual(try harness.store.loadSession(), existing)
+            XCTAssertEqual(harness.backstop.arms, 0)
+            XCTAssertFalse(harness.guardFake.calls.contains("disablesleep 1"))
+        }
+    }
+
+    @MainActor
     func testLossWhileBackstopArmsRollsBackBeforeChangingSleep() async throws {
         try await withAutomation { harness, manager, automation in
             let gate = AsyncGate()

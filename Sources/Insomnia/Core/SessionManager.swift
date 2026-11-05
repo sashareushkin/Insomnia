@@ -1172,15 +1172,17 @@ final class SessionManager {
     /// until that undo is confirmed.
     func start(duration: TimeInterval) async {
         lidAutomation?.manualOverride()
-        _ = await start(duration: duration, authorized: { true })
+        _ = await start(duration: duration, authorized: nil)
     }
 
     func startFromLidAngle(authorized: @escaping @MainActor @Sendable () -> Bool) async -> Date? {
         await start(duration: config.defaultPreset, authorized: authorized)
     }
 
-    private func start(duration: TimeInterval, authorized: @escaping @MainActor @Sendable () -> Bool) async -> Date? {
-        guard authorized() else { return nil }
+    private func start(
+        duration: TimeInterval, authorized: (@MainActor @Sendable () -> Bool)?
+    ) async -> Date? {
+        guard authorized?() != false else { return nil }
         guard !quitRequested else {
             Log.info("start ignored: quit requested")
             return nil
@@ -1200,9 +1202,9 @@ final class SessionManager {
     }
 
     private func performStart(
-        duration: TimeInterval, ticket: Int, authorized: @MainActor @Sendable () -> Bool
+        duration: TimeInterval, ticket: Int, authorized: (@MainActor @Sendable () -> Bool)?
     ) async -> Date? {
-        guard authorized() else { return nil }
+        guard authorized?() != false else { return nil }
         guard session == nil else {
             Log.info("start ignored: session already active")
             return nil
@@ -1226,6 +1228,13 @@ final class SessionManager {
             // could not move it aside. It may be a valid session, and a
             // rollback could not put it back.
             fail("start refused, nothing changed: session.json could not be read (\(error.localizedDescription)). Remove it or move it out of \(paths.appSupport.path), then start again")
+            return nil
+        }
+
+        // Reconcile may be waiting to retry. Keep the existing file for it,
+        // even if the app has not yet recovered the session into memory.
+        if authorized != nil, sessionBefore != nil {
+            Log.info("lid angle start ignored: session on disk awaits reconciliation")
             return nil
         }
 
@@ -1254,7 +1263,7 @@ final class SessionManager {
             return nil
         }
 
-        guard authorized() else {
+        guard authorized?() != false else {
             rollBackStart(journal: journalBefore, session: sessionBefore)
             Log.info("lid angle start abandoned before disabling sleep: crossing no longer valid")
             return nil
