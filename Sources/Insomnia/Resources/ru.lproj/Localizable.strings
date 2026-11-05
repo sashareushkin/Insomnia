@@ -266,3 +266,35 @@
 "Agent apps are never frozen or throttled. Editors, AI apps, terminals, browsers, password managers, local databases, Tailscale, local model servers, and meeting, recording and dictation apps are also protected from the automatic lid-close scope even when they are not listed here; adding one to the freeze list above overrides that built-in automatic protection. The hard denylist still prevents explicit freezing of agent apps, Apple apps, Insomnia and Docker Desktop." = "Агентские приложения никогда не останавливаются и не ограничиваются. Редакторы, ИИ-приложения, терминалы, браузеры, менеджеры паролей, локальные базы данных, Tailscale, локальные серверы моделей и приложения для встреч, записи и диктовки также защищены от автоматических действий при закрытии крышки, даже если их нет в списке; добавление такого приложения в список выше отменяет эту встроенную защиту от автоматической остановки. Жёсткий список запрета не позволяет останавливать вручную добавленные агентские приложения, приложения Apple, Insomnia и Docker Desktop.";
 "The password is kept in the login keychain, readable without a prompt only by the build of Insomnia that saved it; after a reinstall, enter it again." = "Пароль хранится в связке ключей входа и читается без запроса только той сборкой Insomnia, которая его сохранила; после переустановки введите его снова.";
 "This action only targets panes marked with the command above. With Enter enabled, it can submit unfinished input in a marked pane." = "Эта команда затрагивает только панели, отмеченные командой выше. Если включён Enter, она может отправить незавершённый ввод в отмеченной панели.";
+
+/* Lid angle */
+"Lid angle automation" = "Автоматизация по углу крышки";
+"Automatically start and end Insomnia" = "Автоматически запускать и завершать Insomnia";
+"Start while closing" = "Запуск при закрытии";
+"End while opening" = "Завершение при открытии";
+"Starts a session for the default timer duration. Opening the lid ends only a session started by lid angle automation." = "Сессия запускается на стандартное время таймера. При открытии крышки завершается только сессия, запущенная по углу крышки.";
+"Lid angle diagnostics" = "Диагностика угла крышки";
+"Monitor the sensor for diagnostics" = "Отслеживать показания датчика";
+"Lid angle sensor" = "Датчик угла крышки";
+"Current angle" = "Текущий угол";
+"Direction" = "Направление";
+"Angular speed" = "Угловая скорость";
+"%@°/s" = "%@°/с";
+"Successful reads per second" = "Успешных считываний в секунду";
+"Angle changes per second" = "Изменений угла в секунду";
+"Read errors" = "Ошибки чтения";
+"Last successful read" = "Последнее успешное измерение";
+"Monitoring off" = "Мониторинг выключен";
+"Looking for the sensor…" = "Поиск датчика…";
+"Paused for system sleep" = "Пауза на время сна Mac";
+"Available" = "Доступен";
+"No supported lid angle sensor found" = "Поддерживаемый датчик угла крышки не найден";
+"Unrecognized report · retrying" = "Неизвестный формат данных · повторная попытка";
+"Could not open the sensor (%@) · retrying" = "Не удалось открыть датчик (%@) · повторная попытка";
+"Could not read the sensor (%@) · retrying" = "Не удалось прочитать датчик (%@) · повторная попытка";
+"Detecting…" = "Определяется…";
+"Stationary" = "Неподвижна";
+"Opening" = "Открывается";
+"Closing" = "Закрывается";
+"%@°" = "%@°";
+"Ended when the lid opened. Sleep is back to normal." = "Сессия завершена при открытии крышки. Обычный режим сна восстановлен.";
