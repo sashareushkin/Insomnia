@@ -6,10 +6,17 @@ enum LidDirection: String, Equatable {
 }
 
 struct LidState: Equatable {
+    static let maximumSampleGap: TimeInterval = 0.3
+
     let angle: Double
     let direction: LidDirection
     let speed: Double
     let timestamp: Date
+    let uptime: TimeInterval
+
+    var isCurrent: Bool {
+        ProcessInfo.processInfo.systemUptime - uptime <= Self.maximumSampleGap
+    }
 }
 
 /// A median of three rejects a lone spike. The motion anchor accumulates
@@ -27,7 +34,7 @@ struct LidMotionFilter {
             self = Self()
             return nil
         }
-        if let lastSampleTime, uptime <= lastSampleTime || uptime - lastSampleTime > 0.3 {
+        if let lastSampleTime, uptime <= lastSampleTime || uptime - lastSampleTime > LidState.maximumSampleGap {
             self = Self()
         }
         lastSampleTime = uptime
@@ -50,7 +57,7 @@ struct LidMotionFilter {
         } else {
             anchor = (filtered, uptime)
         }
-        return LidState(angle: filtered, direction: direction, speed: speed, timestamp: timestamp)
+        return LidState(angle: filtered, direction: direction, speed: speed, timestamp: timestamp, uptime: uptime)
     }
 }
 

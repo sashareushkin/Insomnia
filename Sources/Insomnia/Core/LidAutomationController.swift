@@ -13,7 +13,7 @@ final class LidAutomationController {
     @ObservationIgnored private var sleeping = false
     @ObservationIgnored private var terminating = false
     @ObservationIgnored private var crossings = LidThresholdCrossings()
-    @ObservationIgnored private var lastAngle: Double?
+    @ObservationIgnored private var lastReading: LidState?
     @ObservationIgnored private var stopRequested = false
     @ObservationIgnored private var readingRevision = 0
     @ObservationIgnored private var ownershipRevision = 0
@@ -75,17 +75,17 @@ final class LidAutomationController {
     private func resetEvidence() {
         readingRevision += 1
         crossings = LidThresholdCrossings()
-        lastAngle = nil
+        lastReading = nil
         stopRequested = false
     }
 
     func accept(_ state: LidState?) {
-        guard let state, let manager, ready, !sleeping, !terminating, manager.config.lidAngleEnabled else {
-            if lastAngle != nil { resetEvidence() }
+        guard let state, state.isCurrent, let manager, ready, !sleeping, !terminating, manager.config.lidAngleEnabled else {
+            if lastReading != nil { resetEvidence() }
             return
         }
         let thresholds = manager.config.lidAngleThresholds
-        lastAngle = state.angle
+        lastReading = state
         if ownedStart != manager.session?.startedAt { ownedStart = nil }
         if state.angle <= Double(thresholds.open - 2) { stopRequested = false }
 
@@ -108,8 +108,9 @@ final class LidAutomationController {
         operation = Task { [weak self, weak manager] in
             guard let self, let manager else { return }
             let start = await manager.startFromLidAngle {
-                guard self.readingRevision == reading, let angle = self.lastAngle else { return false }
-                return angle < Double(manager.config.lidAngleThresholds.open)
+                guard self.readingRevision == reading, !self.stopRequested,
+                      let sample = self.lastReading, sample.isCurrent else { return false }
+                return sample.angle < Double(manager.config.lidAngleThresholds.open)
             }
             self.operation = nil
             if self.ownershipRevision == ownership, start != nil {
@@ -125,7 +126,8 @@ final class LidAutomationController {
         operation = Task { [weak self, weak manager] in
             guard let self, let manager else { return }
             defer { self.operation = nil }
-            guard self.stopRequested, self.ownedStart == ownedStart, manager.session?.startedAt == ownedStart else { return }
+            guard self.stopRequested, self.lastReading?.isCurrent == true,
+                  self.ownedStart == ownedStart, manager.session?.startedAt == ownedStart else { return }
             self.ownedStart = nil
             self.stopRequested = false
             let outcome = await manager.end(reason: .lidAngle)

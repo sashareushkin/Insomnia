@@ -172,6 +172,10 @@ final class LidAngleTests: XCTestCase {
             send(20, .closing, to: automation)
             await automation.waitForOperation()
             XCTAssertFalse(manager.isActive)
+            send(100, .stationary, to: automation)
+            send(20, .closing, to: automation, age: 1)
+            await automation.waitForOperation()
+            XCTAssertFalse(manager.isActive)
 
             close(automation)
             await automation.waitForOperation()
@@ -278,8 +282,9 @@ final class LidAngleTests: XCTestCase {
     }
 
     @MainActor
-    private func send(_ angle: Double, _ direction: LidDirection, to automation: LidAutomationController) {
-        automation.accept(LidState(angle: angle, direction: direction, speed: 0, timestamp: Date()))
+    private func send(_ angle: Double, _ direction: LidDirection, to automation: LidAutomationController, age: TimeInterval = 0) {
+        automation.accept(LidState(angle: angle, direction: direction, speed: 0, timestamp: Date(),
+                                   uptime: ProcessInfo.processInfo.systemUptime - age))
     }
 
     @MainActor
