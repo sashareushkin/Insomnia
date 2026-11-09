@@ -8,9 +8,14 @@ import IOKit
 final class LidObserver {
     nonisolated static let debounce: TimeInterval = 2
     nonisolated static let clamshellKey = "AppleClamshellState"
+    /// IOPM.h's kIOPMMessageClamshellStateChange is a function-like macro
+    /// expansion that Swift cannot import (system, power family, code 0x100).
+    nonisolated static let clamshellStateChangeMessage: UInt32 = (0x38 << 26) | (13 << 14) | 0x100
 
     /// Called on the main actor after the debounce, with `true` for closed.
     var onChange: ((Bool) -> Void)?
+    /// The raw close event, for callers that must act before system sleep.
+    var onClosedImmediately: (() -> Void)?
 
     /// Last delivered state, refreshed from the registry when read.
     var isClosed: Bool {
@@ -47,19 +52,20 @@ final class LidObserver {
         return (value as? Bool) ?? ((value as? NSNumber)?.boolValue)
     }
 
-    func start() {
-        guard port == nil else { return }
+    @discardableResult
+    func start() -> Bool {
+        guard port == nil else { return true }
         lastDelivered = read() ?? false
         service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
         guard service != 0 else {
             Log.error("lid observer: IOPMrootDomain not found")
-            return
+            return false
         }
         guard let p = IONotificationPortCreate(kIOMainPortDefault) else {
             Log.error("lid observer: IONotificationPortCreate failed")
             IOObjectRelease(service)
             service = 0
-            return
+            return false
         }
         port = p
         let source = IONotificationPortGetRunLoopSource(p).takeUnretainedValue()
@@ -70,9 +76,10 @@ final class LidObserver {
         guard kr == KERN_SUCCESS else {
             Log.error("lid observer: IOServiceAddInterestNotification failed (\(kr))")
             stop()
-            return
+            return false
         }
         Log.info("lid observer started (lid \(lastDelivered ? "closed" : "open"))")
+        return true
     }
 
     func stop() {
@@ -136,10 +143,23 @@ final class LidObserver {
 
     // MARK: Private
 
-    private static let callback: IOServiceInterestCallback = { refcon, _, _, _ in
+    private static let callback: IOServiceInterestCallback = { refcon, _, type, argument in
         guard let refcon else { return }
         let observer = Unmanaged<LidObserver>.fromOpaque(refcon).takeUnretainedValue()
-        MainActor.assumeIsolated { observer.handleInterest() }
+        let bits = UInt(bitPattern: argument)
+        MainActor.assumeIsolated { observer.handleKernelMessage(type: type, argument: bits) }
+    }
+
+    func handleKernelMessage(type: UInt32, argument: UInt) {
+        if let onClosedImmediately {
+            // Use the event's state even if the registry already reflects
+            // a subsequent open. The existing lid actions still debounce.
+            if type == Self.clamshellStateChangeMessage, argument & UInt(kClamshellStateBit) != 0 {
+                onClosedImmediately()
+            }
+            guard onChange != nil else { return }
+        }
+        handleInterest()
     }
 
     private func settle() {

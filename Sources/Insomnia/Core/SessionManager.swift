@@ -365,6 +365,7 @@ final class SessionManager {
 
     let store: Store
     let paths: Paths
+    let screenOn: ScreenOn?
     private let sleepGuard: any SleepGuarding
     private let processControl: any ProcessSignaling
     private let backstop: any BackstopScheduling
@@ -540,6 +541,7 @@ final class SessionManager {
         keyboard: any KeyboardBacklighting = NoopKeyboardBacklight(),
         appNap: any AppNapPreferencing = NoopAppNapPreferences(),
         notifier: any Notifying = RecordingNotifier(),
+        screenOn: ScreenOn? = nil,
         clamshell: @escaping @Sendable () -> Bool? = { LidObserver.readClamshellState() },
         clock: @escaping @Sendable () -> Date = { Date() },
         processLookup: @escaping @Sendable (Int32) -> ProcessLookup = { SignalProcessControl.processTableState(pid: $0) },
@@ -561,6 +563,7 @@ final class SessionManager {
         self.keyboard = keyboard
         self.appNap = appNap
         self.notifier = notifier
+        self.screenOn = screenOn
         self.clamshell = clamshell
         self.clock = clock
         self.processLookup = processLookup
@@ -642,7 +645,8 @@ final class SessionManager {
             display: display,
             keyboard: keyboard,
             appNap: CFAppNapPreferences(),
-            notifier: notifier
+            notifier: notifier,
+            screenOn: ScreenOn.live()
         )
         let services = AppServices(
             paths: paths,
@@ -1236,6 +1240,11 @@ final class SessionManager {
 
         do {
             try await sleepGuard.setSleepDisabled(true)
+            // Manual and automatic starts both reach this point after the
+            // journal, backstop and sleep guard have succeeded.
+            if endTicket == ticket, screenOn?.stop() == false {
+                throw ScreenOn.HandoffError()
+            }
         } catch let still as CommandStillRunningError {
             // Whether the setting was applied is unknown and no second pmset
             // may run beside this one. session.json and the journal stay as
@@ -1244,7 +1253,7 @@ final class SessionManager {
             stopTransaction(for: still, thenEnd: .startFailed)
             return
         } catch {
-            fail("could not disable sleep: \(error.localizedDescription)")
+            fail(error is ScreenOn.HandoffError ? error.localizedDescription : "could not disable sleep: \(error.localizedDescription)")
             _ = await performEnd(reason: .startFailed)
             return
         }
@@ -2642,6 +2651,11 @@ final class SessionManager {
                 return
             } catch {
                 fail("could not re-apply sleep guard: \(error.localizedDescription); ending session")
+                _ = await performEnd(reason: .recoveryUnavailable)
+                return
+            }
+            guard screenOn?.stop() != false else {
+                fail(ScreenOn.HandoffError().localizedDescription)
                 _ = await performEnd(reason: .recoveryUnavailable)
                 return
             }

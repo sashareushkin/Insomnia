@@ -59,6 +59,11 @@
 "Display: %@. The level saved before the lid closed, %@, was not restored; set it with the brightness keys or Control Center." = "Display: %@. The level saved before the lid closed, %@, was not restored; set it with the brightness keys or Control Center.";
 "Docker paused" = "Docker paused";
 "End session" = "End session";
+"Screen On" = "Screen On";
+"Screen On needs to watch for lid closure." = "Screen On needs to watch for lid closure.";
+"Could not turn on Screen On." = "Could not turn on Screen On.";
+"Could not turn off Screen On. Quit Insomnia to release it." = "Could not turn off Screen On. Quit Insomnia to release it.";
+"Could not start the session while Screen On is active." = "Could not start the session while Screen On is active.";
 "End session below" = "End session below";
 "Ended by you. Sleep is back to normal." = "Ended by you. Sleep is back to normal.";
 "Enter submits whatever is already typed in that pane, including a line that was never finished. When off, \"continue\" is typed and nothing submits it." = "Enter submits whatever is already typed in that pane, including a line that was never finished. When off, \"continue\" is typed and nothing submits it.";

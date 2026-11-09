@@ -59,6 +59,11 @@
 "Display: %@. The level saved before the lid closed, %@, was not restored; set it with the brightness keys or Control Center." = "Экран: %@. Не удалось восстановить яркость, сохранённую перед закрытием крышки (%@). Настройте её клавишами яркости или в Пункте управления.";
 "Docker paused" = "Docker приостановлен";
 "End session" = "Завершить сессию";
+"Screen On" = "Включить экран";
+"Screen On needs to watch for lid closure." = "Не удалось начать отслеживать закрытие крышки для удержания экрана.";
+"Could not turn on Screen On." = "Не удалось включить удержание экрана.";
+"Could not turn off Screen On. Quit Insomnia to release it." = "Не удалось выключить удержание экрана. Выйдите из Insomnia, чтобы его снять.";
+"Could not start the session while Screen On is active." = "Не удалось запустить сессию, пока действует удержание экрана.";
 "End session below" = "Завершать сессию ниже";
 "Ended by you. Sleep is back to normal." = "Сессия завершена вами. Обычный режим сна восстановлен.";
 "Enter submits whatever is already typed in that pane, including a line that was never finished. When off, \"continue\" is typed and nothing submits it." = "Enter отправляет всё, что уже введено в эту панель, в том числе незавершённую строку. Если выключено, вводится «continue», но команда не отправляется.";
