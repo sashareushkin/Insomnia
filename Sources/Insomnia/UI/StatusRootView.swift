@@ -79,7 +79,7 @@ struct StatusRootView: View {
                         .opacity(model.startErrorShown ? 1 : 0)
                         .animation(Motion.base(reduceMotion: reduceMotion), value: model.startErrorShown)
                 }
-            } else if showsCountdown {
+            } else if showsCountdown && !manager.config.compactMenuBar {
                 countdown
                 if showsRunningControls {
                     HoldToEndButton(reduceMotion: reduceMotion, action: onHoldEnd, state: model.endHold)
@@ -95,6 +95,9 @@ struct StatusRootView: View {
         .frame(height: NSStatusBar.system.thickness)
         .fixedSize()
         .contentShape(Rectangle())
+        .onChange(of: manager.config.compactMenuBar) { _, compact in
+            if compact { model.endHold.cancel() }
+        }
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
         } action: { width in

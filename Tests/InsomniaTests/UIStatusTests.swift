@@ -73,6 +73,44 @@ final class UIStatusTests: XCTestCase {
         XCTAssertGreaterThan(host.fittingSize.height, 0)
     }
 
+    @MainActor
+    func testCompactMenuBarUsesIconWidthDuringStartAndSession() async {
+        let harness = Harness()
+        defer { harness.home.destroy() }
+        let manager = harness.makeManager()
+        let model = MenuBarModel()
+        func width() -> CGFloat {
+            let root = StatusRootView(
+                model: model, manager: manager, onTapIcon: {}, onTapPill: { _ in },
+                onTapCountdown: {}, onHoldEnd: {}, onWidthChange: { _ in }
+            )
+            return StatusItemController.makeHostingView(root).fittingSize.width
+        }
+
+        let iconWidth = width()
+        model.phase = .starting
+        model.pendingCountdown = "1:00:00"
+        XCTAssertGreaterThan(width(), iconWidth)
+        manager.config.compactMenuBar = true
+        XCTAssertEqual(width(), iconWidth, accuracy: 0.001)
+
+        await manager.start(duration: 3600)
+        XCTAssertTrue(manager.isActive)
+        model.phase = .running
+        model.pendingCountdown = nil
+        XCTAssertEqual(width(), iconWidth, accuracy: 0.001)
+        XCTAssertTrue(StatusItemController.menuItems(manager: manager, status: PlaceholderStatus())
+            .contains { $0.kind == .endSession })
+        model.phase = .entering(.extend)
+        model.slotsPresent = true
+        XCTAssertGreaterThan(width(), iconWidth)
+        model.slotsPresent = false
+        model.phase = .running
+        manager.config.compactMenuBar = false
+        XCTAssertGreaterThan(width(), iconWidth)
+        await manager.end(reason: .user)
+    }
+
     /// The status item cannot animate its width, so the pills must never
     /// change the layout after the slots have arrived: not while they
     /// stagger in, and not on a digit, which changes the text, its weight

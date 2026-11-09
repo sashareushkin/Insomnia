@@ -7,6 +7,13 @@ struct TimerSettingsView: View {
 
     var body: some View {
         Form {
+            Section {
+                Toggle(
+                    L10n.string("Show only the menu bar icon"),
+                    isOn: SettingsConfigAccess.binding(manager, \.compactMenuBar)
+                )
+            }
+
             Section(L10n.string("Duration presets")) {
                 ForEach(manager.config.presets, id: \.self) { preset in
                     HStack {
