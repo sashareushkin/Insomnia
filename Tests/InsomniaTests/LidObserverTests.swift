@@ -1,3 +1,4 @@
+import IOKit.pwr_mgt
 import XCTest
 @testable import Insomnia
 
@@ -52,6 +53,20 @@ final class LidObserverTests: XCTestCase {
         observer.whenSettled(waiter())
 
         XCTAssertEqual(events, ["settled false"])
+    }
+
+    func testRawCloseIsImmediateEvenIfRegistryAlreadyReportsOpen() {
+        let observer = makeObserver()
+        observer.onClosedImmediately = { [unowned self] in events.append("raw close") }
+        let type = LidObserver.clamshellStateChangeMessage
+
+        observer.handleKernelMessage(type: type + 1, argument: UInt(kClamshellStateBit))
+        observer.handleKernelMessage(type: type, argument: UInt(kClamshellSleepBit))
+        XCTAssertEqual(events, [])
+
+        reading = false
+        observer.handleKernelMessage(type: type, argument: UInt(kClamshellStateBit))
+        XCTAssertEqual(events, ["raw close"])
     }
 
     func testWaiterRunsAfterTheDeliveryOfAPendingChange() async {

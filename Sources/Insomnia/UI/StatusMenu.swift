@@ -13,6 +13,7 @@ enum StatusMenu {
             case warning
             case separator
             case endSession
+            case screenOn(isOn: Bool, enabled: Bool)
             case settings
             case quit
             /// Relaunch this browser with the occlusion flags. Carries the
@@ -60,7 +61,9 @@ enum StatusMenu {
         commandRunning: String? = nil,
         foreignSleep: String? = nil,
         outputsWaiting: [SavedAudioOutput] = [],
-        lidSimulationBuild: Bool = false
+        lidSimulationBuild: Bool = false,
+        screenOn: (isOn: Bool, enabled: Bool)? = nil,
+        screenOnWarning: String? = nil
     ) -> [Item] {
         var out: [Item] = []
         if let held = SleepHeldLine.line(sessionActive: sessionActive, sleepHeld: sleepHeld) {
@@ -99,6 +102,9 @@ enum StatusMenu {
         if let error = present(error) {
             out.append(Item(title: "\u{26A0} \(L10n.presentation(error))", kind: .warning))
         }
+        if let screenOnWarning = present(screenOnWarning) {
+            out.append(Item(title: "\u{26A0} \(screenOnWarning)", kind: .warning))
+        }
         // Its own line, after the error: a restore that failed and a bit
         // someone else set can both be true of the same reconcile.
         if let foreignSleep = present(foreignSleep) {
@@ -113,6 +119,11 @@ enum StatusMenu {
         }
         if sessionActive {
             out.append(Item(title: endSessionTitle, kind: .endSession))
+        }
+        if let screenOn {
+            out.append(Item(title: L10n.string("Screen On"), kind: .screenOn(isOn: screenOn.isOn, enabled: screenOn.enabled)))
+        }
+        if sessionActive || screenOn != nil {
             out.append(Item(title: "", kind: .separator))
         }
         out.append(Item(title: settingsTitle, kind: .settings))
@@ -136,7 +147,8 @@ enum StatusMenu {
         settings: Selector,
         quit: Selector,
         relaunchBrowser: Selector,
-        stopWaitingForOutput: Selector
+        stopWaitingForOutput: Selector,
+        toggleScreenOn: Selector? = nil
     ) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -158,6 +170,12 @@ enum StatusMenu {
                 menu.addItem(entry)
             case .endSession:
                 menu.addItem(action(title: item.title, selector: endSession, key: "", target: target))
+            case let .screenOn(isOn, enabled):
+                guard let toggleScreenOn else { continue }
+                let entry = action(title: item.title, selector: toggleScreenOn, key: "", target: target)
+                entry.state = isOn ? .on : .off
+                entry.isEnabled = enabled
+                menu.addItem(entry)
             case .settings:
                 menu.addItem(action(title: item.title, selector: settings, key: ",", target: target))
             case .quit:

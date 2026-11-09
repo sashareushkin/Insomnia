@@ -663,7 +663,8 @@ final class StatusItemController: NSObject {
             settings: #selector(menuOpenSettings),
             quit: #selector(menuQuit),
             relaunchBrowser: #selector(menuRelaunchBrowser(_:)),
-            stopWaitingForOutput: #selector(menuStopWaitingForOutput(_:))
+            stopWaitingForOutput: #selector(menuStopWaitingForOutput(_:)),
+            toggleScreenOn: #selector(menuToggleScreenOn(_:))
         )
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
     }
@@ -697,7 +698,9 @@ final class StatusItemController: NSObject {
             commandRunning: manager.commandWarning,
             foreignSleep: manager.foreignSleepWarning,
             outputsWaiting: manager.outputsWaitingForRestore,
-            lidSimulationBuild: LidSimulationBuild.isCompiledIn
+            lidSimulationBuild: LidSimulationBuild.isCompiledIn,
+            screenOn: manager.screenOn.map { ($0.isOn, $0.canToggle(sessionActive: manager.isActive)) },
+            screenOnWarning: manager.screenOn?.warning
         )
     }
 
@@ -736,6 +739,10 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func menuEndSession() { holdToEnd() }
+
+    @objc private func menuToggleScreenOn(_ sender: NSMenuItem) {
+        manager.screenOn?.toggle(expectedOn: sender.state == .on, sessionActive: manager.isActive)
+    }
 
     @objc private func menuQuit() {
         NSApplication.shared.terminate(nil)

@@ -837,6 +837,7 @@ struct Harness {
         display: (any DisplayDimming)? = nil,
         keyboard: (any KeyboardBacklighting)? = nil,
         sleepGuard: (any SleepGuarding)? = nil,
+        screenOn: ScreenOn? = nil,
         bootSession: String = SignalProcessControl.bootSession
     ) -> SessionManager {
         let c = clock
@@ -852,6 +853,7 @@ struct Harness {
             keyboard: keyboard ?? self.keyboard,
             appNap: appNap,
             notifier: notifier,
+            screenOn: screenOn,
             clamshell: { lid.closed },
             clock: { c.now },
             processLookup: { table.lookup($0) },
