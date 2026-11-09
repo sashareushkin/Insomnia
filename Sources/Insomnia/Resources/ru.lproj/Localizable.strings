@@ -259,6 +259,7 @@
 "Remove preset %@" = "Удалить вариант длительности %@";
 "Remove tmux target %@" = "Удалить цель tmux %@";
 "Session defaults" = "Настройки сессии";
+"Show only the menu bar icon" = "Только значок в строке меню";
 "Suspend on lid close" = "Остановка при закрытии крышки";
 "The display brightness and keyboard backlight are saved, set to zero and restored when the lid opens. If Insomnia is not running when you open the lid, press the brightness-up key." = "Яркость экрана и подсветка клавиатуры сохраняются, устанавливаются на ноль и восстанавливаются при открытии крышки. Если Insomnia не запущена, когда вы открываете крышку, нажмите клавишу увеличения яркости.";
 "Timer" = "Таймер";

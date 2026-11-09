@@ -259,6 +259,7 @@
 "Remove preset %@" = "Remove preset %@";
 "Remove tmux target %@" = "Remove tmux target %@";
 "Session defaults" = "Session defaults";
+"Show only the menu bar icon" = "Show only the menu bar icon";
 "Suspend on lid close" = "Suspend on lid close";
 "The display brightness and keyboard backlight are saved, set to zero and restored when the lid opens. If Insomnia is not running when you open the lid, press the brightness-up key." = "The display brightness and keyboard backlight are saved, set to zero and restored when the lid opens. If Insomnia is not running when you open the lid, press the brightness-up key.";
 "Timer" = "Timer";

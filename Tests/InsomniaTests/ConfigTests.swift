@@ -160,6 +160,17 @@ final class ConfigTests: XCTestCase {
         XCTAssertEqual(c, expected)
     }
 
+    func testCompactMenuBarDefaultsOffAndRoundTrips() throws {
+        let old = try Store.makeDecoder().decode(Config.self, from: Data(#"{"defaultPreset": 1800}"#.utf8))
+        XCTAssertFalse(old.compactMenuBar)
+        XCTAssertEqual(old.defaultPreset, 1800)
+
+        var config = Config()
+        config.compactMenuBar = true
+        let saved = try Store.makeEncoder().encode(config)
+        XCTAssertEqual(try Store.makeDecoder().decode(Config.self, from: saved), config)
+    }
+
     func testLowPowerOnLidCloseDecodesAndDefaultsOn() throws {
         let off = try Store.makeDecoder().decode(Config.self, from: Data(#"{"lowPowerOnLidClose": false}"#.utf8))
         XCTAssertFalse(off.lowPowerOnLidClose)

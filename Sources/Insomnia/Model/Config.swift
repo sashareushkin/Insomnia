@@ -11,6 +11,7 @@ struct Config: Codable, Equatable, Sendable {
     /// The pill that is focused when the pills open, for a start and for an
     /// extend.
     var defaultFocusField: DurationInput.Field = .hours
+    var compactMenuBar = false
     /// Hard ceiling on a session, including extensions. 30 days.
     var maxDuration: TimeInterval = 30 * 24 * 3600
 
@@ -149,6 +150,7 @@ struct Config: Codable, Equatable, Sendable {
         // A value this build does not know falls back to hours; it must not
         // cost the user the rest of the config.
         defaultFocusField = (try? c.decodeIfPresent(DurationInput.Field.self, forKey: .defaultFocusField)) ?? d.defaultFocusField
+        compactMenuBar = try c.decodeIfPresent(Bool.self, forKey: .compactMenuBar) ?? d.compactMenuBar
         maxDuration = try c.decodeIfPresent(TimeInterval.self, forKey: .maxDuration) ?? d.maxDuration
         freezeList = try c.decodeIfPresent([String].self, forKey: .freezeList) ?? d.freezeList
         freezeAllApps = try c.decodeIfPresent(Bool.self, forKey: .freezeAllApps) ?? d.freezeAllApps
