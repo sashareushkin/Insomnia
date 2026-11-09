@@ -27,10 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
     private var settingsWindow: SettingsWindow?
     private var terminating = false
+    private var lidPowerObservers: [any NSObjectProtocol] = []
 
     override init() {
         let manager = SessionManager.live()
         self.manager = manager
+        manager.lidAutomation = LidAutomationController(manager: manager)
         secrets = KeychainHotspotSecretStore(keychain: KeychainStore()) {
             manager.config.hotspotSSID
         }
@@ -91,7 +93,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(manager: manager, status: status) { [weak settings] in
             settings?.show()
         }
-        Task { await manager.reconcile() }
+        let workspace = NSWorkspace.shared.notificationCenter
+        lidPowerObservers = [(NSWorkspace.willSleepNotification, true), (NSWorkspace.didWakeNotification, false)]
+            .map { name, sleeping in
+                workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.manager.lidAutomation?.setSleeping(sleeping) }
+                }
+            }
+        Task {
+            await manager.reconcile()
+            manager.lidAutomation?.didReconcile()
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        for observer in lidPowerObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
 
     /// Quitting always ends the session (spec 1). Terminate is deferred until
@@ -108,13 +124,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !terminating else { return .terminateCancel }
         terminating = true
+        let monitorCleanup = manager.lidAutomation?.setTerminating(true)
         Task {
             let outcome = await manager.end(reason: .quit)
             if outcome.letsQuitGo {
+                await monitorCleanup?.value
                 sender.reply(toApplicationShouldTerminate: true)
             } else {
                 Log.error("quit deferred: recovery still pending (\(outcome)); staying to retry")
                 terminating = false
+                manager.lidAutomation?.setTerminating(false)
                 sender.reply(toApplicationShouldTerminate: false)
             }
         }

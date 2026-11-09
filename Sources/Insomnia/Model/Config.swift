@@ -15,6 +15,10 @@ struct Config: Codable, Equatable, Sendable {
     /// Hard ceiling on a session, including extensions. 30 days.
     var maxDuration: TimeInterval = 30 * 24 * 3600
 
+    // Lid angle automation
+    var lidAngleEnabled = false
+    var lidAngleThresholds = LidAngleThresholds()
+
     // Lid-close actions
     /// Bundle ids to SIGSTOP while the lid is closed.
     var freezeList: [String] = Config.defaultFreezeList
@@ -152,6 +156,13 @@ struct Config: Codable, Equatable, Sendable {
         defaultFocusField = (try? c.decodeIfPresent(DurationInput.Field.self, forKey: .defaultFocusField)) ?? d.defaultFocusField
         compactMenuBar = try c.decodeIfPresent(Bool.self, forKey: .compactMenuBar) ?? d.compactMenuBar
         maxDuration = try c.decodeIfPresent(TimeInterval.self, forKey: .maxDuration) ?? d.maxDuration
+        lidAngleEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .lidAngleEnabled)) ?? d.lidAngleEnabled
+        if let thresholds = try? c.decodeIfPresent(LidAngleThresholds.self, forKey: .lidAngleThresholds),
+           thresholds.isValid {
+            lidAngleThresholds = thresholds
+        } else if c.contains(.lidAngleThresholds) {
+            lidAngleEnabled = false
+        }
         freezeList = try c.decodeIfPresent([String].self, forKey: .freezeList) ?? d.freezeList
         freezeAllApps = try c.decodeIfPresent(Bool.self, forKey: .freezeAllApps) ?? d.freezeAllApps
         dockerRule = try c.decodeIfPresent(Bool.self, forKey: .dockerRule) ?? d.dockerRule
@@ -173,6 +184,25 @@ struct Config: Codable, Equatable, Sendable {
         tmuxNudgePressesEnter = try c.decodeIfPresent(Bool.self, forKey: .tmuxNudgePressesEnter) ?? d.tmuxNudgePressesEnter
         launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? d.launchAtLogin
         launchAtLoginInstall = try c.decodeIfPresent(String.self, forKey: .launchAtLoginInstall)
+    }
+}
+
+struct LidAngleThresholds: Codable, Equatable, Sendable {
+    static let limits = 0...180
+    static let minimumGap = 3
+    var close = 30
+    var open = 45
+
+    var closeRange: ClosedRange<Int> {
+        Self.limits.lowerBound...(open - Self.minimumGap)
+    }
+
+    var openRange: ClosedRange<Int> {
+        (close + Self.minimumGap)...Self.limits.upperBound
+    }
+
+    var isValid: Bool {
+        Self.limits.contains(close) && Self.limits.contains(open) && open - close >= Self.minimumGap
     }
 }
 
