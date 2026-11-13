@@ -105,6 +105,21 @@ result before manually merging; no automatic merge or release is configured.
 The initial custom infrastructure seed is a one-time bootstrap before
 protection; all subsequent work uses PRs.
 
+### Local app builds
+
+Keep app builds prepared for the owner in the main project's `dist` directory,
+at `dist/<branch>-<short-SHA>/Insomnia.app`. Print the absolute bundle path when
+handing over a build. Build with `scripts/build-app.sh --output <directory>` or
+copy the exact verified bundle from the local report; check its signature at
+the destination. Do not install or launch it as part of source verification.
+
+Keep only the latest successful build and one previous successful build.
+Delete older build directories only after the new app passes packaging and
+signature checks. Never move, replace or delete a running bundle or the bundle
+pinned by the recovery agent: retain it until the owner switches to a newer
+build. Temporary verification worktrees, logs and reports remain outside the
+checkout and are not retained as extra app builds.
+
 ### Required-check migration
 
 The repository previously required the GitHub status context `Swift build and
