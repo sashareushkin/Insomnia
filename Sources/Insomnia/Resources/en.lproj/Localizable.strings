@@ -60,6 +60,7 @@
 "Docker paused" = "Docker paused";
 "End session" = "End session";
 "Screen On" = "Screen On";
+"Screen On is active" = "Screen On is active";
 "Screen On needs to watch for lid closure." = "Screen On needs to watch for lid closure.";
 "Could not turn on Screen On." = "Could not turn on Screen On.";
 "Could not turn off Screen On. Quit Insomnia to release it." = "Could not turn off Screen On. Quit Insomnia to release it.";

@@ -60,6 +60,7 @@
 "Docker paused" = "Docker приостановлен";
 "End session" = "Завершить сессию";
 "Screen On" = "Включить экран";
+"Screen On is active" = "Удержание экрана активно";
 "Screen On needs to watch for lid closure." = "Не удалось начать отслеживать закрытие крышки для удержания экрана.";
 "Could not turn on Screen On." = "Не удалось включить удержание экрана.";
 "Could not turn off Screen On. Quit Insomnia to release it." = "Не удалось выключить удержание экрана. Выйдите из Insomnia, чтобы его снять.";

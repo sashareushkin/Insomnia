@@ -5,14 +5,12 @@ import XCTest
 /// Layout without a status item, a visible menu, or any live system services.
 @MainActor
 final class StatusMenuLayoutTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
         _ = LocalizationManager(language: .english)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         _ = LocalizationManager(language: .english)
-        super.tearDown()
     }
 
     private func menu(machine: String, help: String? = nil, error: String? = nil) -> NSMenu {
@@ -92,6 +90,49 @@ final class StatusMenuLayoutTests: XCTestCase {
         XCTAssertNotNil(WiFiStatusName.toolTip(ssid: "", locationAuthorized: false))
         XCTAssertNil(WiFiStatusName.toolTip(ssid: "Office", locationAuthorized: false))
         XCTAssertNil(WiFiStatusName.toolTip(ssid: nil, locationAuthorized: true))
+    }
+
+    func testSettingsAndQuitAreSeparatedInIdleAndActiveMenus() {
+        for active in [false, true] {
+            let items = StatusMenu.items(
+                sessionActive: active, sleepHeld: active, machine: nil, actions: nil,
+                throttledBrowsers: [], error: nil
+            )
+            XCTAssertEqual(Array(items.suffix(3).map(\.kind)), [.settings, .separator, .quit])
+            XCTAssertNotEqual(items.first?.kind, .separator)
+        }
+        let entries = menu(machine: "Lid open").items
+        XCTAssertEqual(entries[entries.count - 3].title, StatusMenu.settingsTitle)
+        XCTAssertTrue(entries[entries.count - 2].isSeparatorItem)
+        XCTAssertEqual(entries.last?.title, StatusMenu.quitTitle)
+    }
+
+    func testStatusRowsInheritAppearanceAndKeepTheirTextReadableInBothThemes() throws {
+        let app = NSApplication.shared
+        let previous = app.appearance
+        defer { app.appearance = previous }
+        let entry = try XCTUnwrap(menu(machine: "Lid open").items.first)
+        let view = try XCTUnwrap(entry.view)
+        let label = try XCTUnwrap(view.subviews.first as? NSTextField)
+        // A menu supplies its own window while tracking. Use an offscreen
+        // window here so the custom row has the same appearance inheritance.
+        let window = NSWindow(contentRect: view.bounds, styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = view
+        XCTAssertNil(view.appearance)
+        XCTAssertNil(label.appearance)
+        let color = try XCTUnwrap(label.textColor)
+        var brightness: [CGFloat] = []
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            app.appearance = try XCTUnwrap(NSAppearance(named: name))
+            XCTAssertEqual(view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]), name)
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                if let resolved = color.usingColorSpace(.sRGB) {
+                    brightness.append((resolved.redComponent + resolved.greenComponent + resolved.blueComponent) / 3)
+                }
+            }
+        }
+        XCTAssertEqual(brightness.count, 2)
+        XCTAssertGreaterThan(brightness.last ?? 0, (brightness.first ?? 1) + 0.2)
     }
 
     func testNativeMenuIsInstalledOnlyWhileTracking() {

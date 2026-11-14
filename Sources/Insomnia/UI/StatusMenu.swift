@@ -129,6 +129,7 @@ enum StatusMenu {
             out.append(Item(title: "", kind: .separator))
         }
         out.append(Item(title: settingsTitle, kind: .settings))
+        out.append(Item(title: "", kind: .separator))
         out.append(Item(title: quitTitle, kind: .quit))
         return out
     }

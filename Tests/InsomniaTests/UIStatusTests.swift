@@ -417,6 +417,7 @@ final class UIStatusTests: XCTestCase {
             StatusMenu.Item(title: StatusMenu.endSessionTitle, kind: .endSession),
             StatusMenu.Item(title: "", kind: .separator),
             StatusMenu.Item(title: StatusMenu.settingsTitle, kind: .settings),
+            StatusMenu.Item(title: "", kind: .separator),
             StatusMenu.Item(title: StatusMenu.quitTitle, kind: .quit),
         ])
     }
@@ -432,9 +433,11 @@ final class UIStatusTests: XCTestCase {
         )
         XCTAssertEqual(items, [
             StatusMenu.Item(title: StatusMenu.settingsTitle, kind: .settings),
+            StatusMenu.Item(title: "", kind: .separator),
             StatusMenu.Item(title: StatusMenu.quitTitle, kind: .quit),
         ])
-        XCTAssertFalse(items.contains { $0.kind == .separator })
+        XCTAssertNotEqual(items.first?.kind, .separator)
+        XCTAssertEqual(items.filter { $0.kind == .separator }.count, 1)
     }
 
     func testMenuShowsTheLastErrorAsAWarning() {
@@ -447,7 +450,7 @@ final class UIStatusTests: XCTestCase {
             error: "sudo: a password is required"
         )
         XCTAssertEqual(items.first, StatusMenu.Item(title: "\u{26A0} sudo: a password is required", kind: .warning))
-        XCTAssertEqual(items.map(\.kind), [.warning, .separator, .settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.warning, .separator, .settings, .separator, .quit])
     }
 
     /// A hotspot join skipped for want of a password is a warning line in
@@ -465,7 +468,7 @@ final class UIStatusTests: XCTestCase {
         )
         XCTAssertEqual(
             items.map(\.kind),
-            [.info, .warning, .relaunchBrowser(Self.chrome), .warning, .warning, .separator, .endSession, .separator, .settings, .quit]
+            [.info, .warning, .relaunchBrowser(Self.chrome), .warning, .warning, .separator, .endSession, .separator, .settings, .separator, .quit]
         )
         XCTAssertEqual(items[3], StatusMenu.Item(
             title: "\u{26A0} Hotspot password unreadable by this build: enter it again in Settings",
@@ -473,7 +476,7 @@ final class UIStatusTests: XCTestCase {
         ))
         XCTAssertEqual(
             StatusMenu.items(sessionActive: false, sleepHeld: false, machine: nil, actions: nil, throttledBrowsers: [], hotspotWarning: nil, error: nil).map(\.kind),
-            [.settings, .quit]
+            [.settings, .separator, .quit]
         )
     }
 
@@ -558,7 +561,7 @@ final class UIStatusTests: XCTestCase {
         XCTAssertEqual(items.filter { $0.kind == .relaunchBrowser(Self.arc) }.count, 1)
         XCTAssertEqual(
             items.map(\.kind),
-            [.info, .warning, .relaunchBrowser(Self.chrome), .relaunchBrowser(Self.arc), .separator, .endSession, .separator, .settings, .quit]
+            [.info, .warning, .relaunchBrowser(Self.chrome), .relaunchBrowser(Self.arc), .separator, .endSession, .separator, .settings, .separator, .quit]
         )
     }
 
