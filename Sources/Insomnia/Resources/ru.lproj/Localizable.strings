@@ -221,6 +221,12 @@
 "not found by macOS" = "не найден macOS";
 "not registered" = "не зарегистрирован";
 "on (name hidden until Location is allowed)" = "подключено (имя скрыто до разрешения геолокации)";
+"hidden" = "скрыто";
+"Lid %@" = "Крышка %@";
+"Quit" = "Выйти";
+"Allow Location access in Settings to show the Wi-Fi network name." = "Чтобы видеть имя сети Wi-Fi, разрешите доступ к геопозиции в настройках.";
+"open" = "открыта";
+"closed" = "закрыта";
 "pmset reports SleepDisabled 1, but Insomnia has no session and did not set it, so it is left alone. To re-enable sleep: %@. Ending an Insomnia session also sets it to 0." = "pmset сообщает SleepDisabled 1, но активной сессии Insomnia нет и это значение установлено не приложением, поэтому оно оставлено без изменений. Чтобы включить сон: %@. Завершение сессии Insomnia также устанавливает значение 0.";
 "recovery agent could not be confirmed: %@" = "Не удалось подтвердить работу агента восстановления: %@";
 "session.json could not be read (%@) and could not be moved aside: %@; treated as expired and left in place" = "Не удалось прочитать session.json (%@) и переместить его в сторону: %@. Файл оставлен на месте и считается просроченным.";

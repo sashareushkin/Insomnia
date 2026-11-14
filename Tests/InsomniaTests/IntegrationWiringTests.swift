@@ -482,7 +482,7 @@ final class IntegrationWiringTests: XCTestCase {
     func testWiFiStatusNameExplainsLocationRedaction() {
         XCTAssertEqual(
             WiFiStatusName.display(ssid: nil, locationAuthorized: false),
-            "on (name hidden until Location is allowed)"
+            "hidden"
         )
         XCTAssertEqual(WiFiStatusName.display(ssid: "Office", locationAuthorized: false), "Office")
         XCTAssertNil(WiFiStatusName.display(ssid: nil, locationAuthorized: true))

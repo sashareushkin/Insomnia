@@ -221,6 +221,12 @@
 "not found by macOS" = "not found by macOS";
 "not registered" = "not registered";
 "on (name hidden until Location is allowed)" = "on (name hidden until Location is allowed)";
+"hidden" = "hidden";
+"Lid %@" = "Lid %@";
+"Quit" = "Quit";
+"Allow Location access in Settings to show the Wi-Fi network name." = "Allow Location access in Settings to show the Wi-Fi network name.";
+"open" = "open";
+"closed" = "closed";
 "pmset reports SleepDisabled 1, but Insomnia has no session and did not set it, so it is left alone. To re-enable sleep: %@. Ending an Insomnia session also sets it to 0." = "pmset reports SleepDisabled 1, but Insomnia has no session and did not set it, so it is left alone. To re-enable sleep: %@. Ending an Insomnia session also sets it to 0.";
 "recovery agent could not be confirmed: %@" = "recovery agent could not be confirmed: %@";
 "session.json could not be read (%@) and could not be moved aside: %@; treated as expired and left in place" = "session.json could not be read (%@) and could not be moved aside: %@; treated as expired and left in place";

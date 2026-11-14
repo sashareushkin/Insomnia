@@ -372,15 +372,15 @@ final class UIStatusTests: XCTestCase {
     func testMachineLine() {
         XCTAssertEqual(
             StatusLines.machine(lidClosed: true, watts: 4.12, wifiSSID: "iPhone", batteryPercent: nil, isCharging: false),
-            "Lid: closed \u{00B7} 4.1 W \u{00B7} Wi-Fi: iPhone"
+            "Lid closed\n4.1 W \u{00B7} Wi-Fi: iPhone"
         )
         XCTAssertEqual(
             StatusLines.machine(lidClosed: false, watts: nil, wifiSSID: nil, batteryPercent: nil, isCharging: false),
-            "Lid: open"
+            "Lid open"
         )
         XCTAssertEqual(
             StatusLines.machine(lidClosed: false, watts: nil, wifiSSID: "", batteryPercent: 82, isCharging: true),
-            "Lid: open \u{00B7} 82% charging"
+            "Lid open \u{00B7} 82% charging"
         )
     }
 

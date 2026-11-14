@@ -641,10 +641,10 @@ final class StatusItemController: NSObject {
 
     // MARK: Right-click menu
 
-    /// Right-click (or ctrl-click) on the status item. Not assigned to
-    /// `statusItem.menu`, which would swallow the left click the pills need.
+    /// Right-click (or ctrl-click) on the status item. The menu is assigned
+    /// only during native menu tracking, so other left clicks reach the pills.
     private func showMenu() {
-        guard let button else { return }
+        guard button != nil else { return }
         // The lid, the battery and the watts are read right here, so the menu
         // opens on what the machine is doing now. The SSID and the throttled
         // browser list are whatever the last scan found: both have to be
@@ -666,13 +666,14 @@ final class StatusItemController: NSObject {
             stopWaitingForOutput: #selector(menuStopWaitingForOutput(_:)),
             toggleScreenOn: #selector(menuToggleScreenOn(_:))
         )
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
+        StatusMenuLayout.popUp(menu, from: statusItem)
     }
 
     /// The menu's lines from what the session and the status source report
     /// now. Static, so a test can check them without a status item.
     static func menuItems(manager: SessionManager, status: any StatusSource) -> [StatusMenu.Item] {
-        StatusMenu.items(
+        let locationAuthorized = (status as? LiveStatusSource)?.locationPermission.isAuthorized ?? true
+        return StatusMenu.items(
             sessionActive: manager.isActive,
             sleepHeld: manager.state.sleepDisabledByUs,
             machine: StatusLines.machine(
@@ -680,7 +681,7 @@ final class StatusItemController: NSObject {
                 watts: status.instantWatts(),
                 wifiSSID: WiFiStatusName.display(
                     ssid: status.wifiSSID,
-                    locationAuthorized: (status as? LiveStatusSource)?.locationPermission.isAuthorized ?? true
+                    locationAuthorized: locationAuthorized
                 ),
                 batteryPercent: status.batteryPercent,
                 isCharging: status.isCharging
@@ -700,7 +701,8 @@ final class StatusItemController: NSObject {
             outputsWaiting: manager.outputsWaitingForRestore,
             lidSimulationBuild: LidSimulationBuild.isCompiledIn,
             screenOn: manager.screenOn.map { ($0.isOn, $0.canToggle(sessionActive: manager.isActive)) },
-            screenOnWarning: manager.screenOn?.warning
+            screenOnWarning: manager.screenOn?.warning,
+            machineToolTip: WiFiStatusName.toolTip(ssid: status.wifiSSID, locationAuthorized: locationAuthorized)
         )
     }
 
