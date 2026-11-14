@@ -55,6 +55,108 @@ final class LidObserverTests: XCTestCase {
         XCTAssertEqual(events, ["settled false"])
     }
 
+    func testInitiallyClosedLidDeliversOneDebouncedClose() async {
+        reading = true
+        let observer = makeObserver()
+
+        observer.synchronizeInitialState()
+        observer.handleInterest()
+        XCTAssertEqual(events, [], "the initial close must still wait out the debounce")
+        await waitUntil("the already-closed lid was never delivered") { !events.isEmpty }
+        observer.handleInterest()
+        await pastTheDebounce()
+
+        XCTAssertEqual(events, ["change true"])
+    }
+
+    func testInitiallyOpenOrUnavailableLidDoesNotDeliverAnOpen() async {
+        for initial in [false, nil] as [Bool?] {
+            reading = initial
+            let observer = makeObserver()
+            observer.synchronizeInitialState()
+            await pastTheDebounce()
+            XCTAssertEqual(events, [], "startup must not undo journaled actions for an unknown lid")
+            observer.stop()
+        }
+    }
+
+    func testInitialCloseThatReopensDuringDebounceIsDropped() async {
+        reading = true
+        let observer = makeObserver()
+        observer.synchronizeInitialState()
+        reading = false
+        observer.handleInterest()
+        await pastTheDebounce()
+
+        XCTAssertEqual(events, [])
+    }
+
+    func testStopCancelsInitialClose() async {
+        reading = true
+        let observer = makeObserver()
+        observer.synchronizeInitialState()
+        observer.stop()
+        await pastTheDebounce()
+
+        XCTAssertEqual(events, [])
+    }
+
+    func testRawOnlyObserverDoesNotQueueAnInitialClose() {
+        reading = true
+        let observer = LidObserver(read: { [unowned self] in self.reading }, debounce: debounce)
+        observer.onClosedImmediately = { [unowned self] in events.append("raw close") }
+        observer.synchronizeInitialState()
+        observer.whenSettled(waiter())
+
+        XCTAssertEqual(events, ["settled false"])
+    }
+
+    /// The angle-triggered start can finish with the hinge already shut.
+    /// Use only fake devices and a temporary journal to prove that the initial
+    /// delivery darkens both devices and that opening restores their levels.
+    func testLidAlreadyClosedAfterAutomaticStartDarkensAndRestoresDevices() async throws {
+        let h = Harness()
+        defer { h.home.destroy() }
+        let manager = h.makeManager()
+        manager.config.freezeList = []
+        manager.config.dockerRule = false
+        let freezer = FakeFreezer(apps: [], processes: [], control: h.procs)
+        let actions = LidActions(manager: manager, freezer: freezer, docker: DockerRule(freezer: freezer),
+                                 audio: h.audio, display: h.display, keyboard: h.keyboard)
+        h.clamshell.closed = true
+        let started = await manager.startFromLidAngle { true }
+        XCTAssertNotNil(started)
+        reading = true
+        let observer = makeObserver()
+        var applied: [Bool] = []
+        observer.onChange = { closed in
+            let event = actions.lidEventArrived()
+            Task { @MainActor in
+                if closed { await actions.onClose(event: event) } else { await actions.onOpen() }
+                applied.append(closed)
+            }
+        }
+
+        observer.synchronizeInitialState()
+        await waitUntil("initial close actions did not finish") { applied == [true] }
+        XCTAssertEqual(h.display.sets, [0])
+        XCTAssertEqual(h.keyboard.sets, [0])
+        XCTAssertEqual(try h.store.loadState()?.savedDisplayBrightness, 0.7)
+        XCTAssertEqual(try h.store.loadState()?.savedKeyboardBrightness, 0.5)
+
+        reading = false
+        observer.handleInterest()
+        await waitUntil("opening did not restore the devices") { applied == [true, false] }
+        XCTAssertEqual(h.display.sets, [0, 0.7])
+        XCTAssertEqual(h.keyboard.sets, [0, 0.5])
+        XCTAssertEqual(h.display.wakes, 1)
+        XCTAssertNil(try h.store.loadState()?.savedDisplayBrightness)
+        XCTAssertNil(try h.store.loadState()?.savedKeyboardBrightness)
+        observer.stop()
+        await manager.end(reason: .user)
+        XCTAssertEqual(try h.store.loadState(), .clean)
+    }
+
     func testRawCloseIsImmediateEvenIfRegistryAlreadyReportsOpen() {
         let observer = makeObserver()
         observer.onClosedImmediately = { [unowned self] in events.append("raw close") }
