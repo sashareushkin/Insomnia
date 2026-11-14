@@ -21,7 +21,8 @@ Insomnia controls sleep, power settings, process suspension and restoration.
 - Real tests involving lid closure, power changes or stopping processes require explicit owner permission.
 - Use injected dependencies and temporary test journals. On the owner's working Mac, run `scripts/verify-local.sh safe`; it skips `UIStatusTests`, `UIStartupTests` and `KeychainStoreTests`, checks that this pattern excludes exactly those suites, and reports every test skip or failure.
 - Run the full test suite only with `INSOMNIA_ISOLATED_MACOS26=1 scripts/verify-local.sh full-isolated` on a disposable macOS 26 VM or dedicated test Mac. Never set this acknowledgment on the owner's daily-use Mac.
-- Keep verification reports, logs, build products and the temporary `.app` outside the checkout. Report the candidate SHA, `origin/custom` base SHA, tested merge-tree SHA, commands, skips and failures. A local report is not a GitHub status check.
+- Keep verification reports, logs and transient verification products outside the checkout. Save deliverable `.app` builds in the main project's `dist/<branch>-<short-SHA>/Insomnia.app`, and give the owner the absolute path. Keep only the latest successful build and one previous successful build; remove older build directories after the new bundle passes packaging and signature checks. Do not move, replace or delete the running app or the bundle pinned by the recovery agent; if it is too old to retain, leave it until the owner has switched to a newer build.
+- Report the candidate SHA, `origin/custom` base SHA, tested merge-tree SHA, commands, skips and failures. A local report is not a GitHub status check.
 
 ## Completion
 1. Run `scripts/verify-local.sh safe` on the exact candidate, inspect its report and `git diff`/whitespace errors.
