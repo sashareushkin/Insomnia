@@ -29,11 +29,12 @@ enum StatusMenu {
 
         let title: String
         let kind: Kind
+        var toolTip: String? = nil
     }
 
     static var endSessionTitle: String { L10n.string("End session") }
     static var settingsTitle: String { L10n.string("Settings\u{2026}") }
-    static var quitTitle: String { L10n.string("Quit Insomnia") }
+    static var quitTitle: String { L10n.string("Quit") }
 
     /// Disabled status lines, an optional end action, then Settings… and Quit. Empty
     /// lines are dropped, and the separator only appears when something
@@ -63,14 +64,15 @@ enum StatusMenu {
         outputsWaiting: [SavedAudioOutput] = [],
         lidSimulationBuild: Bool = false,
         screenOn: (isOn: Bool, enabled: Bool)? = nil,
-        screenOnWarning: String? = nil
+        screenOnWarning: String? = nil,
+        machineToolTip: String? = nil
     ) -> [Item] {
         var out: [Item] = []
         if let held = SleepHeldLine.line(sessionActive: sessionActive, sleepHeld: sleepHeld) {
             out.append(Item(title: held.text, kind: held.isWarning ? .warning : .info))
         }
         if let machine = present(machine) {
-            out.append(Item(title: machine, kind: .info))
+            out.append(Item(title: machine, kind: .info, toolTip: machineToolTip))
         }
         if let actions = present(actions) {
             out.append(Item(title: actions, kind: .info))
@@ -127,6 +129,7 @@ enum StatusMenu {
             out.append(Item(title: "", kind: .separator))
         }
         out.append(Item(title: settingsTitle, kind: .settings))
+        out.append(Item(title: "", kind: .separator))
         out.append(Item(title: quitTitle, kind: .quit))
         return out
     }
@@ -152,21 +155,20 @@ enum StatusMenu {
     ) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let lineFont = NSFont.menuFont(ofSize: NSFont.smallSystemFontSize)
         for item in items {
             switch item.kind {
             case .separator:
                 menu.addItem(.separator())
             case .info, .warning:
-                let entry = NSMenuItem(title: item.title, action: nil, keyEquivalent: "")
+                // The custom view owns the whole row. A native title would
+                // also reserve title/key-equivalent columns and widen it.
+                let entry = NSMenuItem(title: "", action: nil, keyEquivalent: "")
                 entry.isEnabled = false
-                // NSMenuItem has no font of its own; the attributed title is
-                // the only way to make one line smaller or orange.
-                var attributes: [NSAttributedString.Key: Any] = [.font: lineFont]
-                if item.kind == .warning {
-                    attributes[.foregroundColor] = NSColor.systemOrange
-                }
-                entry.attributedTitle = NSAttributedString(string: item.title, attributes: attributes)
+                entry.setAccessibilityLabel(item.title)
+                entry.setAccessibilityHelp(item.toolTip)
+                entry.toolTip = item.toolTip ?? item.title
+                entry.view = StatusMenuLayout.statusView(text: item.title, isWarning: item.kind == .warning)
+                entry.view?.toolTip = entry.toolTip
                 menu.addItem(entry)
             case .endSession:
                 menu.addItem(action(title: item.title, selector: endSession, key: "", target: target))

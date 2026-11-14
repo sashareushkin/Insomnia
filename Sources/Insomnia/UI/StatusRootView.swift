@@ -48,6 +48,7 @@ struct StatusRootView: View {
     /// confirms it: the blink is the first thing that answers the keystroke.
     /// A refused start closes it again with the pills coming back.
     private var eyeOpen: Bool { isRunning || model.phase == .starting }
+    private var screenOnActive: Bool { manager.screenOn?.isOn == true }
 
     private var countdownText: String {
         Self.countdownText(pending: model.pendingCountdown, live: manager.countdownText, phase: model.phase)
@@ -109,11 +110,10 @@ struct StatusRootView: View {
         .environment(\.locale, language.locale)
     }
 
-    /// A closed eye while idle; it opens while sleep is held, so the app
-    /// visibly does something even when Low Power Mode is not showing.
+    /// A closed eye while idle, an open eye for a session, and a sun badge
+    /// while the independent Screen On request is held.
     private var icon: some View {
-        EyeMarkView(isRunning: eyeOpen, reduceMotion: reduceMotion)
-            .frame(width: 20, height: 20)
+        StatusEyeView(isRunning: eyeOpen, isScreenOn: screenOnActive, reduceMotion: reduceMotion)
             .contentShape(Rectangle())
             .phaseAnimator([CGFloat(1), reduceMotion ? 1 : 0.86, 1], trigger: model.iconBounce) { content, scale in
                 content.scaleEffect(scale)
@@ -122,6 +122,8 @@ struct StatusRootView: View {
             }
             .onTapGesture(perform: onTapIcon)
             .accessibilityLabel(L10n.string("Insomnia", language: localization.language))
+            .accessibilityValue(screenOnActive ? L10n.string("Screen On is active", language: localization.language) : "")
+            .help(L10n.string(screenOnActive ? "Screen On is active" : "Insomnia", language: localization.language))
     }
 
     /// All three slots are in the layout whenever they are present;

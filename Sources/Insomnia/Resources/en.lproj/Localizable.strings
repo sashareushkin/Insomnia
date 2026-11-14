@@ -60,6 +60,7 @@
 "Docker paused" = "Docker paused";
 "End session" = "End session";
 "Screen On" = "Screen On";
+"Screen On is active" = "Screen On is active";
 "Screen On needs to watch for lid closure." = "Screen On needs to watch for lid closure.";
 "Could not turn on Screen On." = "Could not turn on Screen On.";
 "Could not turn off Screen On. Quit Insomnia to release it." = "Could not turn off Screen On. Quit Insomnia to release it.";
@@ -221,6 +222,12 @@
 "not found by macOS" = "not found by macOS";
 "not registered" = "not registered";
 "on (name hidden until Location is allowed)" = "on (name hidden until Location is allowed)";
+"hidden" = "hidden";
+"Lid %@" = "Lid %@";
+"Quit" = "Quit";
+"Allow Location access in Settings to show the Wi-Fi network name." = "Allow Location access in Settings to show the Wi-Fi network name.";
+"open" = "open";
+"closed" = "closed";
 "pmset reports SleepDisabled 1, but Insomnia has no session and did not set it, so it is left alone. To re-enable sleep: %@. Ending an Insomnia session also sets it to 0." = "pmset reports SleepDisabled 1, but Insomnia has no session and did not set it, so it is left alone. To re-enable sleep: %@. Ending an Insomnia session also sets it to 0.";
 "recovery agent could not be confirmed: %@" = "recovery agent could not be confirmed: %@";
 "session.json could not be read (%@) and could not be moved aside: %@; treated as expired and left in place" = "session.json could not be read (%@) and could not be moved aside: %@; treated as expired and left in place";

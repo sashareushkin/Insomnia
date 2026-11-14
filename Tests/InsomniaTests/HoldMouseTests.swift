@@ -229,7 +229,7 @@ final class HoldMouseTests: XCTestCase {
         for active in [false, true] {
             let items = StatusMenu.items(sessionActive: active, sleepHeld: false, machine: nil, actions: nil, throttledBrowsers: [], error: nil)
             XCTAssertEqual(items.filter { $0.kind == .endSession }.count, active ? 1 : 0)
-            XCTAssertEqual(Array(items.suffix(active ? 4 : 2)).map(\.kind), active ? [.endSession, .separator, .settings, .quit] : [.settings, .quit])
+            XCTAssertEqual(Array(items.suffix(active ? 5 : 3)).map(\.kind), active ? [.endSession, .separator, .settings, .separator, .quit] : [.settings, .separator, .quit])
             let end = NSSelectorFromString("endSession")
             let other = #selector(NSObject.description)
             let menu = StatusMenu.menu(items, target: nil, endSession: end, settings: other, quit: other, relaunchBrowser: other, stopWaitingForOutput: other)

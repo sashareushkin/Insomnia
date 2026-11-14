@@ -1,4 +1,5 @@
 import AppKit
+import Observation
 import XCTest
 @testable import Insomnia
 
@@ -76,6 +77,53 @@ final class ScreenOnTests: XCTestCase {
         screen.toggle(expectedOn: true, sessionActive: false)
         XCTAssertFalse(screen.isOn)
         XCTAssertEqual(power.acquisitions, 1)
+    }
+
+    func testIndicatorObservesAcquisitionAndAutomaticLidRelease() {
+        let lid = Lid()
+        let power = Power()
+        let screen = ScreenOn(lid: lid, acquire: power.acquire, release: power.release)
+        let changed = Locked(false)
+        withObservationTracking {
+            _ = screen.isOn
+        } onChange: {
+            changed.value = true
+        }
+
+        screen.toggle(expectedOn: false, sessionActive: false)
+        XCTAssertTrue(changed.value, "the menu bar must redraw when Screen On starts")
+        XCTAssertTrue(screen.isOn)
+
+        changed.value = false
+        withObservationTracking {
+            _ = screen.isOn
+        } onChange: {
+            changed.value = true
+        }
+        lid.close()
+        XCTAssertTrue(changed.value, "a raw lid close must update the indicator without a menu click")
+        XCTAssertFalse(screen.isOn)
+    }
+
+    func testIndicatorStaysOnWhenReleaseFailsAndUpdatesAfterRetry() {
+        let power = Power()
+        let screen = ScreenOn(lid: Lid(), acquire: power.acquire, release: power.release)
+        screen.toggle(expectedOn: false, sessionActive: false)
+        let changed = Locked(false)
+        withObservationTracking {
+            _ = screen.isOn
+        } onChange: {
+            changed.value = true
+        }
+
+        power.refusesRelease = true
+        XCTAssertFalse(screen.stop())
+        XCTAssertFalse(changed.value)
+        XCTAssertTrue(screen.isOn, "the sun must remain while the display assertion is still held")
+        power.refusesRelease = false
+        XCTAssertTrue(screen.stop())
+        XCTAssertTrue(changed.value)
+        XCTAssertFalse(screen.isOn)
     }
 
     func testNoAssertionWithoutObserverOrIfLidClosesDuringSetup() {

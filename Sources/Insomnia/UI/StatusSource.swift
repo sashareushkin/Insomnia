@@ -60,19 +60,22 @@ final class PlaceholderStatus: StatusSource {
 /// Pure formatting for the menu's status block, kept out of the views so
 /// it can be tested.
 enum StatusLines {
-    /// "Lid: closed · 4.1 W · Wi-Fi: iPhone". Unknown parts are omitted.
+    /// Lid/battery and power/Wi-Fi occupy two short lines. Unknown parts
+    /// are omitted, including the second line when neither value is known.
     static func machine(lidClosed: Bool, watts: Double?, wifiSSID: String?, batteryPercent: Int?, isCharging: Bool) -> String {
-        var parts: [String] = [L10n.format("Lid: %@", L10n.string(lidClosed ? "closed" : "open"))]
-        if let w = watts {
-            parts.append(L10n.format("%.1f W", w))
-        }
+        var parts: [String] = [L10n.format("Lid %@", L10n.string(lidClosed ? "closed" : "open"))]
         if let p = batteryPercent {
             parts.append(L10n.format(isCharging ? "%d%% charging" : "%d%%", p))
         }
-        if let ssid = wifiSSID, !ssid.isEmpty {
-            parts.append(L10n.format("Wi-Fi: %@", ssid))
+        var details: [String] = []
+        if let w = watts {
+            details.append(L10n.format("%.1f W", w))
         }
-        return parts.joined(separator: " \u{00B7} ")
+        if let ssid = wifiSSID, !ssid.isEmpty {
+            details.append(L10n.format("Wi-Fi: %@", ssid))
+        }
+        let summary = parts.joined(separator: " \u{00B7} ")
+        return details.isEmpty ? summary : summary + "\n" + details.joined(separator: " \u{00B7} ")
     }
 
     /// "3 apps frozen · Docker paused", or nil when nothing is held.
@@ -135,7 +138,12 @@ enum SleepHeldLine {
 enum WiFiStatusName {
     static func display(ssid: String?, locationAuthorized: Bool) -> String? {
         if let ssid, !ssid.isEmpty { return ssid }
-        return locationAuthorized ? nil : L10n.string("on (name hidden until Location is allowed)")
+        return locationAuthorized ? nil : L10n.string("hidden")
+    }
+
+    static func toolTip(ssid: String?, locationAuthorized: Bool) -> String? {
+        guard (ssid ?? "").isEmpty, !locationAuthorized else { return nil }
+        return L10n.string("Allow Location access in Settings to show the Wi-Fi network name.")
     }
 }
 

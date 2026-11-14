@@ -24,7 +24,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: "could not clear low power mode: sudo: a password is required",
             foreignSleep: SessionManager.foreignSleepLine
         )
-        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .separator, .settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(items[0].title, "\u{26A0} could not clear low power mode: sudo: a password is required")
         XCTAssertEqual(items[1].title, "\u{26A0} \(SessionManager.foreignSleepLine)")
     }
@@ -39,7 +39,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: nil,
             foreignSleep: SessionManager.foreignSleepLine
         )
-        XCTAssertEqual(items.map(\.kind), [.warning, .separator, .settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(items[0].title, "\u{26A0} \(SessionManager.foreignSleepLine)")
     }
 
@@ -56,7 +56,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: "sudo: a password is required",
             foreignSleep: SessionManager.foreignSleepLine
         )
-        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .warning, .separator, .settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(items.prefix(3).map(\.title), [
             HotspotPasswordProblem.unreadable.menuLine,
             "\u{26A0} sudo: a password is required",
@@ -74,7 +74,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: nil,
             foreignSleep: " "
         )
-        XCTAssertEqual(items.map(\.kind), [.settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.settings, .separator, .quit])
     }
 
     /// The sudo pmset left running has its own line, above an unrelated
@@ -90,7 +90,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: "could not remove session.json: permission denied",
             commandRunning: command
         )
-        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .separator, .settings, .quit])
+        XCTAssertEqual(items.map(\.kind), [.warning, .warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(items[0].title, "\u{26A0} \(command)")
         XCTAssertEqual(items[1].title, "\u{26A0} could not remove session.json: permission denied")
 
@@ -103,7 +103,7 @@ final class StatusMenuWarningTests: XCTestCase {
             error: "could not remove session.json: permission denied",
             commandRunning: nil
         )
-        XCTAssertEqual(afterExit.map(\.kind), [.warning, .separator, .settings, .quit])
+        XCTAssertEqual(afterExit.map(\.kind), [.warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(afterExit[0].title, "\u{26A0} could not remove session.json: permission denied")
     }
 

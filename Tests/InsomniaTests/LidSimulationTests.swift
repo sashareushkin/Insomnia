@@ -96,12 +96,12 @@ final class LidSimulationGateTests: XCTestCase {
     /// never mistaken for a normal release.
     func testTheStatusMenuMarksALidSimulationBuild() {
         let marked = StatusMenu.items(sessionActive: false, sleepHeld: false, machine: nil, actions: nil, throttledBrowsers: [], error: nil, lidSimulationBuild: true)
-        XCTAssertEqual(marked.map(\.kind), [.warning, .separator, .settings, .quit])
+        XCTAssertEqual(marked.map(\.kind), [.warning, .separator, .settings, .separator, .quit])
         XCTAssertEqual(marked.first?.title, LidSimulationBuild.marker)
         XCTAssertTrue(LidSimulationBuild.marker.contains("simulate-lid.sh"))
 
         let plain = StatusMenu.items(sessionActive: false, sleepHeld: false, machine: nil, actions: nil, throttledBrowsers: [], error: nil, lidSimulationBuild: false)
-        XCTAssertEqual(plain.map(\.kind), [.settings, .quit])
+        XCTAssertEqual(plain.map(\.kind), [.settings, .separator, .quit])
     }
 }
 

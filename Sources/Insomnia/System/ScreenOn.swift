@@ -1,5 +1,6 @@
 import Foundation
 import IOKit.pwr_mgt
+import Observation
 
 @MainActor
 protocol ScreenOnLidWatching: AnyObject {
@@ -14,6 +15,7 @@ extension LidObserver: ScreenOnLidWatching {}
 /// Owns the app's temporary request to keep the display awake. Its lifetime
 /// is independent of the journal-backed session until that session starts.
 @MainActor
+@Observable
 final class ScreenOn {
     struct HandoffError: LocalizedError {
         var errorDescription: String? { L10n.string("Could not start the session while Screen On is active.") }
