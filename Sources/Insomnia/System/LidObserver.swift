@@ -79,7 +79,18 @@ final class LidObserver {
             return false
         }
         Log.info("lid observer started (lid \(lastDelivered ? "closed" : "open"))")
+        synchronizeInitialState()
         return true
+    }
+
+    /// A session can finish starting after the lid has already closed.
+    /// Replay that close through the usual debounce, since no later kernel
+    /// change is guaranteed. An initial open is left to launch reconciliation.
+    /// Raw-only observers (Screen On) do not need a debounced state delivery.
+    func synchronizeInitialState() {
+        guard onChange != nil else { return }
+        lastDelivered = false
+        handleInterest()
     }
 
     func stop() {

@@ -53,6 +53,37 @@ final class LidAngleTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testSettingsSurviveRelaunchAndResumeMonitoringWithoutAnotherToggle() async throws {
+        let harness = Harness()
+        defer { harness.home.destroy() }
+        let manager = harness.makeManager()
+        SettingsConfigAccess.binding(manager, \.lidAngleThresholds.close).wrappedValue = 35
+        SettingsConfigAccess.binding(manager, \.lidAngleThresholds.open).wrappedValue = 55
+
+        for enabled in [true, false] {
+            SettingsConfigAccess.binding(manager, \.lidAngleEnabled).wrappedValue = enabled
+            SettingsConfigAccess.binding(manager, \.darkenDisplayOnLidClose).wrappedValue = enabled
+
+            // A new manager reads config.json, just as the next app process does.
+            let relaunched = harness.makeManager()
+            XCTAssertEqual(relaunched.config.lidAngleEnabled, enabled)
+            XCTAssertEqual(relaunched.config.lidAngleThresholds, LidAngleThresholds(close: 35, open: 55))
+            XCTAssertEqual(relaunched.config.darkenDisplayOnLidClose, enabled)
+            let source = MockLidAngleSource()
+            let automation = LidAutomationController(manager: relaunched, monitor: LidMonitor(source: source))
+            relaunched.lidAutomation = automation
+            await relaunched.reconcile()
+            automation.didReconcile()
+
+            XCTAssertEqual(automation.monitor.diagnostics.status, enabled ? .waiting : .stopped)
+            if enabled { await source.waitForExhaustion() }
+            let cleanup = automation.setTerminating(true)
+            await source.release()
+            await cleanup?.value
+        }
+    }
+
     func testSlowTravelAndFastCrossingsWithJitterAndSingleSpikes() {
         var filter = LidMotionFilter()
         var crossings = LidThresholdCrossings()
